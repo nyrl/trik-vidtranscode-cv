@@ -29,6 +29,11 @@ typedef enum TRIK_VIDTRANSCODE_CV_VideoFormat
 } TRIK_VIDTRANSCODE_CV_VideoFormat;
 
 
+typedef struct TRIK_VIDTRANSCODE_CV_Params {
+    IVIDTRANSCODE_Params	base;
+} TRIK_VIDTRANSCODE_CV_Params;
+
+
 typedef struct TRIK_VIDTRANSCODE_CV_DynamicParams {
     IVIDTRANSCODE_DynamicParams	base;
 
@@ -40,9 +45,22 @@ typedef struct TRIK_VIDTRANSCODE_CV_DynamicParams {
 } TRIK_VIDTRANSCODE_CV_DynamicParams;
 
 
-typedef struct TRIK_VIDTRANSCODE_CV_Params {
-    IVIDTRANSCODE_Params	base;
-} TRIK_VIDTRANSCODE_CV_Params;
+typedef struct TRIK_VIDTRANSCODE_CV_InArgs {
+    IVIDTRANSCODE_InArgs	base;
+} TRIK_VIDTRANSCODE_CV_InArgs;
+
+
+typedef struct TRIK_VIDTRANSCODE_CV_ImageTarget {
+    XDM_Point m_center;
+    XDM_Rect  m_bound;
+} TRIK_VIDTRANSCODE_CV_ImageTarget;
+
+typedef struct TRIK_VIDTRANSCODE_CV_OutArgs {
+    IVIDTRANSCODE_OutArgs	     base;
+    TRIK_VIDTRANSCODE_CV_ImageTarget targets[64];
+    XDAS_Int32                       numTargets;
+
+} TRIK_VIDTRANSCODE_CV_OutArgs;
 
 
 #ifdef __cplusplus
