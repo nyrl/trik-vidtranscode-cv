@@ -12,11 +12,12 @@ var Pkg = xdc.useModule('xdc.bld.PackageContents');
 
 /* initialize local vars with those set in xdcpaths.mak (via XDCARGS) */
 for (x = 0; x < arguments.length; x++) {
-    if (arguments[x].match(/^CODEGEN_INSTALL_DIR=/)) {
-        cgRootDir = arguments[x].split("=")[1];
+    if (arguments[x].match(/^CGTOOLS_C674=/)) {
+        C674_rootdir = arguments[x].split("=")[1];
     }
 }
 
+// c0000000 - c8000000 - Linux
 // c8000000 - ca000000 - CMEM
 // ca000000 - cd000000 - DDRALGHEAP
 // cd000000 - cf000000 - DDR2
@@ -77,23 +78,21 @@ Build.platformTable["ti.platforms.evmOMAPL138"] = {
     stackMemory: "DDR2"
 };
 
-/* should test here that cgRootDir is set! */
 
-var C674 = xdc.useModule('ti.targets.elf.C674');
-C674.rootDir = cgRootDir;
-
-C674.platforms = [
+if (C674_rootdir) {
+var targ = xdc.useModule('ti.targets.elf.C674');
+targ.rootDir = C674_rootdir;
+targ.platforms = [
     "ti.platforms.evmOMAPL138"
 ];
-
-$trace("Adding ti.targets.elf.C674 to Build.targets", 1, ['genserver']);
-Build.targets.$add(C674);
+Build.targets.$add(targ);
 
 /* We remove a few profiles, just to cut down on build time */
-delete C674.profiles["coverage"];
-delete C674.profiles["profile"];
-delete C674.profiles["whole_program"];
-delete C674.profiles["whole_program_debug"];
+delete targ.profiles["coverage"];
+delete targ.profiles["profile"];
+delete targ.profiles["whole_program"];
+delete targ.profiles["whole_program_debug"];
+}
 
-/* Create a .zip file for redistribution.  Remove this line if you prefer .tar */
+/* Create a .zip or .tar file for redistribution. */
 Pkg.attrs.archiver = 'tar';
