@@ -11,3 +11,17 @@
 *.lai
 *.la
 *.a
+
+# XDC generates files
+/.dlls
+/.executables
+/.interfaces
+/.libraries
+/.xdcenv.mak
+/lib
+/package
+/package.mak
+
+# Built package
+/trik_vidtranscode_cv.tar
+/trik_vidtranscode_cv.zip

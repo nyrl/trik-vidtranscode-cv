@@ -25,7 +25,8 @@ Pkg.otherFiles.$add(publicHeader);
  * package.  Note that the extension is added by XDC, so it need
  * not be explicitly specified.
  */
-var SRCS = ["src/vidtranscode_cv.c"];
+var SRCS = ["src/vidtranscode_cv_fxns.c",
+            "src/vidtranscode_cv.cpp"];
 
 
 for (var i = 0; i < Build.targets.length; i++) {
