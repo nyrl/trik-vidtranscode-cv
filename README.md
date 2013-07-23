@@ -1,2 +1,0 @@
-trik-vidtranscode-cv
-====================
