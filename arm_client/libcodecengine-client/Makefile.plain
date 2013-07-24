@@ -50,7 +50,7 @@ XDC_LDLIBS?=\
 
 
 
-all: $(BUILD_DIR)libcodecengine-client.a
+all: $(BUILD_DIR)libcodecengine-client.a $(BUILD_DIR)libcodecengine-client.defs
 
 clean:
 	@rm -rf $(BUILD_DIR)
@@ -62,6 +62,14 @@ $(BUILD_DIR)libcodecengine-client.a: $(BUILD_DIR)libcodecengine-client.o
 $(BUILD_DIR)libcodecengine-client.o: $(XDC_OSAL_LIBS) $(XDC_RTCFG_LIBS)
 	@rm -f $@
 	$(CC) -shared -o $@ -Wl,--allow-multiple-definition -Wl,--whole-archive $^ $(XDC_LDLIBS) -Wl,--no-whole-archive 
+
+$(BUILD_DIR)libcodecengine-client.defs:
+	@rm -rf $@
+	@echo "-Dxdc_target_types__=\"gnu/targets/arm/std.h\"" >> $@
+	@echo "-Dxdc_target_name__=GCArmv5T" >> $@
+	@echo "-I$(XDC_INSTALL_DIR)/packages" >> $@
+	@echo "-I$(CE_INSTALL_DIR)/packages" >> $@
+	@echo "-I$(XDAIS_INSTALL_DIR)/packages" >> $@
 
 
 
