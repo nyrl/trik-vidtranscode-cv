@@ -9,6 +9,7 @@
 
 var Build = xdc.useModule('xdc.bld.BuildEnvironment');
 var Pkg = xdc.useModule('xdc.bld.PackageContents');
+var C674_rootdir;
 
 /* initialize local vars with those set in xdcpaths.mak (via XDCARGS) */
 for (x = 0; x < arguments.length; x++) {
