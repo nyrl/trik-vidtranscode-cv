@@ -100,7 +100,7 @@ $(BUILD_DIR)cstubs.a:
 # --- rtcfg ---
 $(BUILD_DIR)rtcfg/%.o: $(CE_INSTALL_DIR)/packages/ti/sdo/ce/utils/rtcfg/%.c
 	@mkdir -p $(BUILD_DIR)rtcfg
-	$(CC) -c -o $@ $(CPPFLAGS) $(XDC_CPPFLAGS) $(CFLAGS) $<
+	$(CC) $(CPPFLAGS) $(CFLAGS) -c -o $@ $<
 
 $(BUILD_DIR)rtcfg.a: $(BUILD_DIR)rtcfg/rtcfg.o $(BUILD_DIR)rtcfg/rtcfg_fcinit.o $(BUILD_DIR)rtcfg/rtcfg_remote_config.o
 	@rm -f $@
