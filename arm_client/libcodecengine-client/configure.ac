@@ -49,16 +49,22 @@ AC_ARG_WITH([ti-dsp-ce],[AS_HELP_STRING([--with-ti-dsp-ce=path],[define location
 AS_IF([test "x$with_ti_dsp_ce" = xno], [AC_MSG_ERROR([TI DSP Codec Engine path must be defined])])
 AC_ARG_WITH([ti-dsp-fc],[AS_HELP_STRING([--with-ti-dsp-fc=path],[define location of TI DSP Framework Components])],,[with_ti_dsp_fc="no"])
 AS_IF([test "x$with_ti_dsp_fc" = xno], [AC_MSG_ERROR([TI DSP Framework Components path must be defined])])
+AC_ARG_WITH([ti-dsp-osal],[AS_HELP_STRING([--with-ti-dsp-osal=path],[define location of TI DSP OSAL])],,[with_ti_dsp_osal="no"])
+AS_IF([test "x$with_ti_dsp_osal" = xno], [AC_MSG_ERROR([TI DSP OSAL path must be defined])])
 
 AC_SUBST([TIDSP_CPPFLAGS_DEFS], "-Dxdc_target_types__=gnu/targets/arm/std.h -Dxdc_target_name__=$with_ti_dsp_gpp_arch")
-AC_SUBST([TIDSP_CPPFLAGS_INCS], "-I${with_ti_dsp_xdctools}/packages -I${with_ti_dsp_xdais}/packages -I${with_ti_dsp_ce}/packages -I${with_ti_dsp_fc}/packages")
-AC_SUBST([TIDSP_CPPFLAGS], "$TIDSP_CPPFLAGS_DEFS $TIDSP_CPPFLAGS_INCS")
-AC_SUBST([TIDSP_PATH_RTCFG], "${with_ti_dsp_ce}/packages/ti/sdo/ce/utils/rtcfg")
-CPPFLAGS+=" ${TIDSP_CPPFLAGS}"
+AC_SUBST([TIDSP_CPPFLAGS_INCS], "-I${with_ti_dsp_xdctools}/packages -I${with_ti_dsp_xdais}/packages -I${with_ti_dsp_ce}/packages")
+AC_SUBST([TIDSP_CPPFLAGS_INCS_PRIV], "-I${with_ti_dsp_fc}/packages -I${with_ti_dsp_osal}/packages")
+AC_SUBST([TIDSP_CPPFLAGS], "${TIDSP_CPPFLAGS_DEFS} ${TIDSP_CPPFLAGS_INCS}")
+AC_SUBST([TIDSP_CPPFLAGS_PRIV], "${TIDSP_CPPFLAGS_INCS_PRIV}")
+CPPFLAGS+=" ${TIDSP_CPPFLAGS} ${TIDSP_CPPFLAGS_PRIV}"
 
 AC_CHECK_HEADERS([xdc/std.h],,[AC_MSG_ERROR([cannot find TI-DSP XDC headers])])
 AC_CHECK_HEADERS([ti/sdo/ce/Engine.h ti/sdo/ce/Server.h ti/sdo/ce/CERuntime.h],,[AC_MSG_ERROR([cannot find TI DSP Codec Engine headers])],[[#include <xdc/std.h>]])
 
+AC_SUBST([TIDSP_PATH_RTCFG], "${with_ti_dsp_ce}/packages/ti/sdo/ce/utils/rtcfg")
+AC_SUBST([TIDSP_PATH_CSTUBS], "${with_ti_dsp_osal}/packages/linuxdist/cstubs")
+AC_SUBST([TIDSP_PATH_OSAL], "${with_ti_dsp_osal}/packages/linuxdist/preconfig/production")
 
 
 

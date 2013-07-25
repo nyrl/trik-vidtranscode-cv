@@ -2,6 +2,8 @@ AM_CPPFLAGS		= -I$(top_srcdir)/include -Wall
 
 LDADD			= libcodecengine-client.la
 
+SUBDIRS			= osal cstubs
+
 lib_LTLIBRARIES 	= libcodecengine-client.la
 nodist_libcodecengine_client_la_SOURCES	= $(top_srcdir)/config.h
 libcodecengine_client_la_SOURCES	= $(top_srcdir)/src/main.c \
