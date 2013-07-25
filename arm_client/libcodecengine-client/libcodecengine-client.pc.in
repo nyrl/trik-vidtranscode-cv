@@ -8,6 +8,6 @@ Description: @PACKAGE@ @VERSION@
 Requires: @PKGCONFIG_REQUIRES@
 Version: @VERSION@
 
-Libs: -L${libdir} -lpthread -lrt -ldl
+Libs: -L${libdir}
 Libs.private:
-Cflags: -I${includedir}
+Cflags: -I${includedir} @TIDSP_CPPFLAGS@
