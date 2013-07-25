@@ -1,0 +1,13 @@
+prefix=@prefix@
+exec_prefix=@exec_prefix@
+libdir=@libdir@
+includedir=@includedir@
+
+Name: @PACKAGE@
+Description: @PACKAGE@ @VERSION@
+Requires: @PKGCONFIG_REQUIRES@
+Version: @VERSION@
+
+Libs: -L${libdir} -lpthread -lrt -ldl
+Libs.private:
+Cflags: -I${includedir}
