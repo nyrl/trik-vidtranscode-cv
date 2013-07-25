@@ -62,9 +62,11 @@ CPPFLAGS+=" ${TIDSP_CPPFLAGS} ${TIDSP_CPPFLAGS_PRIV}"
 AC_CHECK_HEADERS([xdc/std.h],,[AC_MSG_ERROR([cannot find TI-DSP XDC headers])])
 AC_CHECK_HEADERS([ti/sdo/ce/Engine.h ti/sdo/ce/Server.h ti/sdo/ce/CERuntime.h],,[AC_MSG_ERROR([cannot find TI DSP Codec Engine headers])],[[#include <xdc/std.h>]])
 
+AC_SUBST([TIDSP_GPP_ARCH], "${with_ti_dsp_gpp_arch}")
 AC_SUBST([TIDSP_PATH_RTCFG], "${with_ti_dsp_ce}/packages/ti/sdo/ce/utils/rtcfg")
 AC_SUBST([TIDSP_PATH_CSTUBS], "${with_ti_dsp_osal}/packages/linuxdist/cstubs")
-AC_SUBST([TIDSP_PATH_OSAL], "${with_ti_dsp_osal}/packages/linuxdist/preconfig/production")
+AC_SUBST([TIDSP_PATH_OSAL], "${with_ti_dsp_osal}/packages/linuxdist/build")
+AC_SUBST([TIDSP_PATH_OSAL_ROOT], "${with_ti_dsp_osal}")
 
 
 
@@ -83,6 +85,8 @@ AC_SUBST([PKGCONFIG_REQUIRES])
 
 AC_CONFIG_FILES([Makefile
 		 build/Makefile
-                 ${PACKAGE}.pc])
+		 build/cstubs/Makefile
+		 build/osal/Makefile
+		 ${PACKAGE}.pc])
 
 AC_OUTPUT
