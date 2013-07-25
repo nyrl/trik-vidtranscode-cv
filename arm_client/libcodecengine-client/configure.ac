@@ -16,6 +16,7 @@ AC_GNU_SOURCE
 # Checks for programs.
 AC_PROG_CC
 AC_PROG_CC_C99
+AC_PROG_CXX
 
 
 # Checks for libraries.
@@ -41,6 +42,7 @@ AC_TYPE_SSIZE_T
 # Codec engine and related stuff paths configuration
 AC_ARG_WITH([ti-dsp-gpp-arch],[AS_HELP_STRING([--with-ti-dsp-gpp-arch=arch],[define location of TI DSP SDK])],,[with_ti_dsp_gpp_arch="no"])
 AS_IF([test "x$with_ti_dsp_gpp_arch" = xno], [AC_MSG_ERROR([TI DSP GPP architecture must be defined])])
+with_ti_dsp_gpp_arch_suffix=${with_ti_dsp_gpp_arch#GCArm}
 AC_ARG_WITH([ti-dsp-xdctools],[AS_HELP_STRING([--with-ti-dsp-xdctools=path],[define location of TI DSP XDC Tools])],,[with_ti_dsp_xdctools="no"])
 AS_IF([test "x$with_ti_dsp_xdctools" = xno], [AC_MSG_ERROR([TI DSP XDC Tools path must be defined])])
 AC_ARG_WITH([ti-dsp-xdais],[AS_HELP_STRING([--with-ti-dsp-xdais=path],[define location of TI DSP XDAIS])],,[with_ti_dsp_xdais="no"])
@@ -62,12 +64,13 @@ CPPFLAGS+=" ${TIDSP_CPPFLAGS} ${TIDSP_CPPFLAGS_PRIV}"
 AC_CHECK_HEADERS([xdc/std.h],,[AC_MSG_ERROR([cannot find TI-DSP XDC headers])])
 AC_CHECK_HEADERS([ti/sdo/ce/Engine.h ti/sdo/ce/Server.h ti/sdo/ce/CERuntime.h],,[AC_MSG_ERROR([cannot find TI DSP Codec Engine headers])],[[#include <xdc/std.h>]])
 
-AC_SUBST([TIDSP_GPP_ARCH], "${with_ti_dsp_gpp_arch}")
-AC_SUBST([TIDSP_PATH_RTCFG], "${with_ti_dsp_ce}/packages/ti/sdo/ce/utils/rtcfg")
-AC_SUBST([TIDSP_PATH_CSTUBS], "${with_ti_dsp_osal}/packages/linuxdist/cstubs")
-AC_SUBST([TIDSP_PATH_OSAL], "${with_ti_dsp_osal}/packages/linuxdist/build")
-AC_SUBST([TIDSP_PATH_OSAL_ROOT], "${with_ti_dsp_osal}")
-
+AC_SUBST([TIDSP_GPP_ARCH], [${with_ti_dsp_gpp_arch}])
+AC_SUBST([TIDSP_GPP_ARCH_SUFFIX], [${with_ti_dsp_gpp_arch_suffix}])
+AC_SUBST([TIDSP_PATH_RTCFG_SRC], [${with_ti_dsp_ce}/packages/ti/sdo/ce/utils/rtcfg])
+AC_SUBST([TIDSP_PATH_CSTUBS_SRC], [${with_ti_dsp_osal}/packages/linuxdist/cstubs])
+AC_SUBST([TIDSP_PATH_OSAL_SRC], [${with_ti_dsp_osal}/packages/linuxdist/preconfig/production])
+AC_SUBST([TIDSP_PATH_OSAL_ROOT], [${with_ti_dsp_osal}])
+AC_MSG_NOTICE([GPP arch is ${TIDSP_GPP_ARCH}, arch suffix is ${TIDSP_GPP_ARCH_SUFFIX}])
 
 
 # Checks for library functions.
