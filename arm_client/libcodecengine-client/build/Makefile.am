@@ -1,10 +1,13 @@
-AM_CPPFLAGS		= -I$(top_srcdir)/include -Wall -Wextra
+AM_CPPFLAGS		= -I$(top_srcdir)/include -Wall
 
 LDADD			= libcodecengine-client.la
 
 lib_LTLIBRARIES 	= libcodecengine-client.la
 nodist_libcodecengine_client_la_SOURCES	= $(top_srcdir)/config.h
-libcodecengine_client_la_SOURCES	= $(top_srcdir)/src/memory.c
+libcodecengine_client_la_SOURCES	= $(top_srcdir)/src/main.c \
+					  $(TIDSP_PATH_RTCFG)/rtcfg.c \
+					  $(TIDSP_PATH_RTCFG)/rtcfg_fcinit.c \
+					  $(TIDSP_PATH_RTCFG)/rtcfg_remote_config.c
 
 
 

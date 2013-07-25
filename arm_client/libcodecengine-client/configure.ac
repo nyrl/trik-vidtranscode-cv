@@ -4,7 +4,7 @@
 AC_PREREQ([2.65])
 AC_INIT([libcodecengine-client], [0.0.1-trunk])
 AM_INIT_AUTOMAKE([foreign color-tests -Wall -Werror])
-AC_CONFIG_SRCDIR([src/memory.c])
+AC_CONFIG_SRCDIR([src/main.c])
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_MACRO_DIR([m4])
 
@@ -47,16 +47,19 @@ AC_ARG_WITH([ti-dsp-xdais],[AS_HELP_STRING([--with-ti-dsp-xdais=path],[define lo
 AS_IF([test "x$with_ti_dsp_xdais" = xno], [AC_MSG_ERROR([TI DSP XDAIS path must be defined])])
 AC_ARG_WITH([ti-dsp-ce],[AS_HELP_STRING([--with-ti-dsp-ce=path],[define location of TI DSP Codec Engine])],,[with_ti_dsp_ce="no"])
 AS_IF([test "x$with_ti_dsp_ce" = xno], [AC_MSG_ERROR([TI DSP Codec Engine path must be defined])])
-#AC_ARG_WITH([ti-dsp-fc],[AS_HELP_STRING([--with-ti-dsp-fc=path],[define location of TI DSP Framework Components])],,[with_ti_dsp_fc="no"])
-#AS_IF([test "x$with_ti_dsp_fc" = xno], [AC_MSG_ERROR([TI DSP Framework Components path must be defined])])
+AC_ARG_WITH([ti-dsp-fc],[AS_HELP_STRING([--with-ti-dsp-fc=path],[define location of TI DSP Framework Components])],,[with_ti_dsp_fc="no"])
+AS_IF([test "x$with_ti_dsp_fc" = xno], [AC_MSG_ERROR([TI DSP Framework Components path must be defined])])
 
 AC_SUBST([TIDSP_CPPFLAGS_DEFS], "-Dxdc_target_types__=gnu/targets/arm/std.h -Dxdc_target_name__=$with_ti_dsp_gpp_arch")
-AC_SUBST([TIDSP_CPPFLAGS_INCS], "-I${with_ti_dsp_xdctools}/packages -I${with_ti_dsp_xdais}/packages -I${with_ti_dsp_ce}/packages")
+AC_SUBST([TIDSP_CPPFLAGS_INCS], "-I${with_ti_dsp_xdctools}/packages -I${with_ti_dsp_xdais}/packages -I${with_ti_dsp_ce}/packages -I${with_ti_dsp_fc}/packages")
 AC_SUBST([TIDSP_CPPFLAGS], "$TIDSP_CPPFLAGS_DEFS $TIDSP_CPPFLAGS_INCS")
+AC_SUBST([TIDSP_PATH_RTCFG], "${with_ti_dsp_ce}/packages/ti/sdo/ce/utils/rtcfg")
 CPPFLAGS+=" ${TIDSP_CPPFLAGS}"
 
 AC_CHECK_HEADERS([xdc/std.h],,[AC_MSG_ERROR([cannot find TI-DSP XDC headers])])
-AC_CHECK_HEADERS([ti/sdo/ce/CERuntime.h ti/sdo/ce/Server.h],,[AC_MSG_ERROR([cannot find TI-DSP Codec Engine headers])],[[#include <xdc/std.h>]])
+AC_CHECK_HEADERS([ti/sdo/ce/Engine.h ti/sdo/ce/Server.h ti/sdo/ce/CERuntime.h],,[AC_MSG_ERROR([cannot find TI DSP Codec Engine headers])],[[#include <xdc/std.h>]])
+
+
 
 
 # Checks for library functions.
