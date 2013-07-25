@@ -30,12 +30,24 @@
 /* Define to 1 if you have the <sys/types.h> header file. */
 #undef HAVE_SYS_TYPES_H
 
+/* Define to 1 if you have the <ti/sdo/ce/CERuntime.h> header file. */
+#undef HAVE_TI_SDO_CE_CERUNTIME_H
+
+/* Define to 1 if you have the <ti/sdo/ce/Engine.h> header file. */
+#undef HAVE_TI_SDO_CE_ENGINE_H
+
+/* Define to 1 if you have the <ti/sdo/ce/Server.h> header file. */
+#undef HAVE_TI_SDO_CE_SERVER_H
+
 /* Define to 1 if you have the <unistd.h> header file. */
 #undef HAVE_UNISTD_H
 
 /* Define to 1 or 0, depending whether the compiler supports simple visibility
    declarations. */
 #undef HAVE_VISIBILITY
+
+/* Define to 1 if you have the <xdc/std.h> header file. */
+#undef HAVE_XDC_STD_H
 
 /* Define to 1 if the system has the type `_Bool'. */
 #undef HAVE__BOOL

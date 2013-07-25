@@ -208,6 +208,16 @@ SED = @SED@
 SET_MAKE = @SET_MAKE@
 SHELL = @SHELL@
 STRIP = @STRIP@
+TIDSP_CPPFLAGS = @TIDSP_CPPFLAGS@
+TIDSP_CPPFLAGS_DEFS = @TIDSP_CPPFLAGS_DEFS@
+TIDSP_CPPFLAGS_INCS = @TIDSP_CPPFLAGS_INCS@
+TIDSP_CPPFLAGS_INCS_PRIV = @TIDSP_CPPFLAGS_INCS_PRIV@
+TIDSP_CPPFLAGS_PRIV = @TIDSP_CPPFLAGS_PRIV@
+TIDSP_GPP_ARCH = @TIDSP_GPP_ARCH@
+TIDSP_PATH_CSTUBS = @TIDSP_PATH_CSTUBS@
+TIDSP_PATH_OSAL = @TIDSP_PATH_OSAL@
+TIDSP_PATH_OSAL_ROOT = @TIDSP_PATH_OSAL_ROOT@
+TIDSP_PATH_RTCFG = @TIDSP_PATH_RTCFG@
 VERSION = @VERSION@
 abs_builddir = @abs_builddir@
 abs_srcdir = @abs_srcdir@
@@ -264,9 +274,7 @@ top_srcdir = @top_srcdir@
 ACLOCAL_AMFLAGS = -I m4
 pkgconfigdir = $(libdir)/pkgconfig
 nodist_pkgconfig_DATA = libcodecengine-client.pc
-pkginclude_HEADERS = include/libcodecengine-client/codecengine-client.h \
-			  include/libcodecengine-client/memory.h
-
+pkginclude_HEADERS = include/libcodecengine-client/codecengine-client.h
 SUBDIRS = build
 all: config.h
 	$(MAKE) $(AM_MAKEFLAGS) all-recursive
