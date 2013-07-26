@@ -8,6 +8,6 @@ Description: @PACKAGE@ @VERSION@
 Requires: @PKGCONFIG_REQUIRES@
 Version: @VERSION@
 
-Libs: -L${libdir}
-Libs.private:
-Cflags: -I${includedir} @TIDSP_CPPFLAGS@
+Libs: -L${libdir} @TIDSP_EXPORT_LDFLAGS@ -Wl,--start-group -lcodecengine-client @TIDSP_EXPORT_LDLIBS@ -Wl,--end-group
+Libs.private: @TIDSP_PRIVATE_LDLIBS@
+Cflags: @TIDSP_EXPORT_CPPFLAGS_DEFS@ -I${includedir} @TIDSP_EXPORT_CPPFLAGS_INCS@

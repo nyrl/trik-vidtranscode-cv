@@ -57,7 +57,7 @@ libcodecengine_client_la_SOURCES	= $(top_srcdir)/src/main.c \
 					  $(TIDSP_PATH_OSAL_ROOT)/packages/xdcruntime/cstubs/LoggerFlex.c \
 					  $(TIDSP_PATH_OSAL_ROOT)/packages/xdcruntime/heaps/HeapStdAlign.c \
 					  $(TIDSP_PATH_OSAL_ROOT)/sources/xdc/runtime/xdc_init.cpp \
-					  $(TIDSP_PATH_OSAL_SRC)/preConfig_p$(TIDSP_GPP_ARCH_SUFFIX).c
+					  $(TIDSP_PATH_OSAL_SRC)/preConfig_pv5T.c
 
 
 

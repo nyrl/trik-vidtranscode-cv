@@ -40,9 +40,6 @@ AC_TYPE_SSIZE_T
 
 
 # Codec engine and related stuff paths configuration
-AC_ARG_WITH([ti-dsp-gpp-arch],[AS_HELP_STRING([--with-ti-dsp-gpp-arch=arch],[define location of TI DSP SDK])],,[with_ti_dsp_gpp_arch="no"])
-AS_IF([test "x$with_ti_dsp_gpp_arch" = xno], [AC_MSG_ERROR([TI DSP GPP architecture must be defined])])
-with_ti_dsp_gpp_arch_suffix=${with_ti_dsp_gpp_arch#GCArm}
 AC_ARG_WITH([ti-dsp-xdctools],[AS_HELP_STRING([--with-ti-dsp-xdctools=path],[define location of TI DSP XDC Tools])],,[with_ti_dsp_xdctools="no"])
 AS_IF([test "x$with_ti_dsp_xdctools" = xno], [AC_MSG_ERROR([TI DSP XDC Tools path must be defined])])
 AC_ARG_WITH([ti-dsp-xdais],[AS_HELP_STRING([--with-ti-dsp-xdais=path],[define location of TI DSP XDAIS])],,[with_ti_dsp_xdais="no"])
@@ -53,24 +50,27 @@ AC_ARG_WITH([ti-dsp-fc],[AS_HELP_STRING([--with-ti-dsp-fc=path],[define location
 AS_IF([test "x$with_ti_dsp_fc" = xno], [AC_MSG_ERROR([TI DSP Framework Components path must be defined])])
 AC_ARG_WITH([ti-dsp-osal],[AS_HELP_STRING([--with-ti-dsp-osal=path],[define location of TI DSP OSAL])],,[with_ti_dsp_osal="no"])
 AS_IF([test "x$with_ti_dsp_osal" = xno], [AC_MSG_ERROR([TI DSP OSAL path must be defined])])
+AC_ARG_WITH([ti-dsp-cmem],[AS_HELP_STRING([--with-ti-dsp-cmem=path],[define location of TI DSP CMEM (LinuxUtils)])],,[with_ti_dsp_cmem="no"])
+AS_IF([test "x$with_ti_dsp_cmem" = xno], [AC_MSG_ERROR([TI DSP CMEM (LinuxUtils) path must be defined])])
+AC_ARG_WITH([ti-dsp-syslink],[AS_HELP_STRING([--with-ti-dsp-syslink=path],[define location of TI DSP SysLink])],,[with_ti_dsp_syslink="no"])
+AS_IF([test "x$with_ti_dsp_syslink" = xno], [AC_MSG_ERROR([TI DSP SysLink path must be defined])])
 
-AC_SUBST([TIDSP_CPPFLAGS_DEFS], "-Dxdc_target_types__=gnu/targets/arm/std.h -Dxdc_target_name__=$with_ti_dsp_gpp_arch")
-AC_SUBST([TIDSP_CPPFLAGS_INCS], "-I${with_ti_dsp_xdctools}/packages -I${with_ti_dsp_xdais}/packages -I${with_ti_dsp_ce}/packages")
-AC_SUBST([TIDSP_CPPFLAGS_INCS_PRIV], "-I${with_ti_dsp_fc}/packages -I${with_ti_dsp_osal}/packages")
-AC_SUBST([TIDSP_CPPFLAGS], "${TIDSP_CPPFLAGS_DEFS} ${TIDSP_CPPFLAGS_INCS}")
-AC_SUBST([TIDSP_CPPFLAGS_PRIV], "${TIDSP_CPPFLAGS_INCS_PRIV}")
-CPPFLAGS+=" ${TIDSP_CPPFLAGS} ${TIDSP_CPPFLAGS_PRIV}"
+AC_SUBST([TIDSP_EXPORT_CPPFLAGS_DEFS], "-Dxdc_target_types__=gnu/targets/arm/std.h -Dxdc_target_name__=GCArmv5T")
+AC_SUBST([TIDSP_EXPORT_CPPFLAGS_INCS], "-I${with_ti_dsp_xdctools}/packages -I${with_ti_dsp_xdais}/packages -I${with_ti_dsp_ce}/packages")
+AC_SUBST([TIDSP_PRIVATE_CPPFLAGS_INCS], "-I${with_ti_dsp_fc}/packages -I${with_ti_dsp_osal}/packages")
+AC_SUBST([TIDSP_EXPORT_LDFLAGS], "-L${with_ti_dsp_xdctools}/packages -L${with_ti_dsp_xdais}/packages -L${with_ti_dsp_ce}/packages -L${with_ti_dsp_fc}/packages -L${with_ti_dsp_osal}/packages -L${with_ti_dsp_cmem}/packages -L${with_ti_dsp_syslink}/packages")
+AC_SUBST([TIDSP_EXPORT_LDLIBS], "${with_ti_dsp_ce}/packages/ti/sdo/ce/utils/rtcfg/linux/OMAPL138/ce_remote_release.cmd ${with_ti_dsp_ce}/packages/ti/sdo/ce/utils/rtcfg/linux/OMAPL138/fc_release.cmd")
+AC_SUBST([TIDSP_PRIVATE_LDLIBS], "-lpthread -lrt -ldl")
+CPPFLAGS+=" ${TIDSP_EXPORT_CPPFLAGS_DEFS} ${TIDSP_EXPORT_CPPFLAGS_INCS} ${TIDSP_PRIVATE_CPPFLAGS_INCS}"
+LDFLAGS+=" ${TIDSP_PRIVATE_LDLIBS}"
 
 AC_CHECK_HEADERS([xdc/std.h],,[AC_MSG_ERROR([cannot find TI-DSP XDC headers])])
 AC_CHECK_HEADERS([ti/sdo/ce/Engine.h ti/sdo/ce/Server.h ti/sdo/ce/CERuntime.h],,[AC_MSG_ERROR([cannot find TI DSP Codec Engine headers])],[[#include <xdc/std.h>]])
 
-AC_SUBST([TIDSP_GPP_ARCH], [${with_ti_dsp_gpp_arch}])
-AC_SUBST([TIDSP_GPP_ARCH_SUFFIX], [${with_ti_dsp_gpp_arch_suffix}])
 AC_SUBST([TIDSP_PATH_RTCFG_SRC], [${with_ti_dsp_ce}/packages/ti/sdo/ce/utils/rtcfg])
 AC_SUBST([TIDSP_PATH_CSTUBS_SRC], [${with_ti_dsp_osal}/packages/linuxdist/cstubs])
 AC_SUBST([TIDSP_PATH_OSAL_SRC], [${with_ti_dsp_osal}/packages/linuxdist/preconfig/production])
 AC_SUBST([TIDSP_PATH_OSAL_ROOT], [${with_ti_dsp_osal}])
-AC_MSG_NOTICE([GPP arch is ${TIDSP_GPP_ARCH}, arch suffix is ${TIDSP_GPP_ARCH_SUFFIX}])
 
 
 # Checks for library functions.
@@ -78,9 +78,8 @@ gl_VISIBILITY
 
 
 # Check for pkgconfig dependencies and setup flags
-PKGCONFIG_REQUIRES=""
-AC_SUBST([PKGCONFIG_REQUIRES])
-
+#PKGCONFIG_REQUIRES=""
+#AC_SUBST([PKGCONFIG_REQUIRES])
 #PKG_CHECK_MODULES([PKGCONFIG], [${PKGCONFIG_REQUIRES}])
 #CPPFLAGS+=" ${PKGCONFIG_CFLAGS}"
 #LIBS+=" ${PKGCONFIG_LIBS}"
@@ -88,8 +87,6 @@ AC_SUBST([PKGCONFIG_REQUIRES])
 
 AC_CONFIG_FILES([Makefile
 		 build/Makefile
-		 build/cstubs/Makefile
-		 build/osal/Makefile
 		 ${PACKAGE}.pc])
 
 AC_OUTPUT
