@@ -1403,7 +1403,7 @@ Optional Features:
   --enable-FEATURE[=ARG]  include FEATURE [ARG=yes]
   --disable-dependency-tracking  speeds up one-time build
   --enable-dependency-tracking   do not reject slow dependency extractors
-  --enable-shared[=PKGS]  build shared libraries [default=yes]
+  --enable-shared[=PKGS]  build shared libraries [default=no]
   --enable-static[=PKGS]  build static libraries [default=yes]
   --enable-fast-install[=PKGS]
                           optimize for fast installation [default=yes]
@@ -8784,16 +8784,7 @@ func_stripname_cnf ()
 
 
 # Set options
-
-
-
-        enable_dlopen=no
-
-
-  enable_win32_dll=no
-
-
-            # Check whether --enable-shared was given.
+# Check whether --enable-shared was given.
 if test "${enable_shared+set}" = set; then :
   enableval=$enable_shared; p=${PACKAGE-default}
     case $enableval in
@@ -8813,7 +8804,7 @@ if test "${enable_shared+set}" = set; then :
       ;;
     esac
 else
-  enable_shared=yes
+  enable_shared=no
 fi
 
 
@@ -8821,6 +8812,14 @@ fi
 
 
 
+
+
+
+
+        enable_dlopen=no
+
+
+  enable_win32_dll=no
 
 
 
@@ -16005,6 +16004,7 @@ ac_compiler_gnu=$ac_cv_c_compiler_gnu
 
 # Only expand once:
 
+ # OSAL stuff has unresolved symbols at link time if linked as DSO
 
 
 

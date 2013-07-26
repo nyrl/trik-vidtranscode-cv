@@ -20,6 +20,7 @@ AC_PROG_CXX
 
 
 # Checks for libraries.
+LT_INIT([disable-shared]) # OSAL stuff has unresolved symbols at link time if linked as DSO
 AC_PROG_LIBTOOL
 PKG_PROG_PKG_CONFIG
 
