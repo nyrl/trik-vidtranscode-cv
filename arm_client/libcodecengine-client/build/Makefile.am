@@ -62,9 +62,9 @@ libcodecengine_client_la_SOURCES	= $(top_srcdir)/src/main.c \
 
 
 
-#TESTS					=
+TESTS					= test_cmem_alloc
 
-#noinst_PROGRAMS				= $(TESTS)
+noinst_PROGRAMS				= $(TESTS)
 
-#test_name_SOURCES			= $(SOURCES) $(top_srcdir)/tests/test_name.c
+test_cmem_alloc_SOURCES			= $(top_srcdir)/tests/test_cmem_alloc.c
 
