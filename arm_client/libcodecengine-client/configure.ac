@@ -17,6 +17,7 @@ AC_GNU_SOURCE
 AC_PROG_CC
 AC_PROG_CC_C99
 AC_PROG_CXX
+AM_PROG_AR
 
 
 # Checks for libraries.
