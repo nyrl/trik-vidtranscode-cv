@@ -90,8 +90,7 @@ am_libcodecengine_client_la_OBJECTS = main.lo rtcfg.lo rtcfg_fcinit.lo \
 	SyncSemThread.lo Thread.lo GateProcessSupport.lo \
 	GateThreadSupport.lo SemProcessSupport.lo SemThreadSupport.lo \
 	ThreadSupport.lo TimestampPosix.lo LoggerSysTID_posix.lo \
-	LoggerFlex.lo HeapStdAlign.lo xdc_init.lo \
-	preConfig_p$(TIDSP_GPP_ARCH_SUFFIX).lo
+	LoggerFlex.lo HeapStdAlign.lo xdc_init.lo preConfig_pv5T.lo
 nodist_libcodecengine_client_la_OBJECTS =
 libcodecengine_client_la_OBJECTS =  \
 	$(am_libcodecengine_client_la_OBJECTS) \
@@ -185,7 +184,6 @@ PACKAGE_TARNAME = @PACKAGE_TARNAME@
 PACKAGE_URL = @PACKAGE_URL@
 PACKAGE_VERSION = @PACKAGE_VERSION@
 PATH_SEPARATOR = @PATH_SEPARATOR@
-PKGCONFIG_REQUIRES = @PKGCONFIG_REQUIRES@
 PKG_CONFIG = @PKG_CONFIG@
 PKG_CONFIG_LIBDIR = @PKG_CONFIG_LIBDIR@
 PKG_CONFIG_PATH = @PKG_CONFIG_PATH@
@@ -194,17 +192,16 @@ SED = @SED@
 SET_MAKE = @SET_MAKE@
 SHELL = @SHELL@
 STRIP = @STRIP@
-TIDSP_CPPFLAGS = @TIDSP_CPPFLAGS@
-TIDSP_CPPFLAGS_DEFS = @TIDSP_CPPFLAGS_DEFS@
-TIDSP_CPPFLAGS_INCS = @TIDSP_CPPFLAGS_INCS@
-TIDSP_CPPFLAGS_INCS_PRIV = @TIDSP_CPPFLAGS_INCS_PRIV@
-TIDSP_CPPFLAGS_PRIV = @TIDSP_CPPFLAGS_PRIV@
-TIDSP_GPP_ARCH = @TIDSP_GPP_ARCH@
-TIDSP_GPP_ARCH_SUFFIX = @TIDSP_GPP_ARCH_SUFFIX@
+TIDSP_EXPORT_CPPFLAGS_DEFS = @TIDSP_EXPORT_CPPFLAGS_DEFS@
+TIDSP_EXPORT_CPPFLAGS_INCS = @TIDSP_EXPORT_CPPFLAGS_INCS@
+TIDSP_EXPORT_LDFLAGS = @TIDSP_EXPORT_LDFLAGS@
+TIDSP_EXPORT_LDLIBS = @TIDSP_EXPORT_LDLIBS@
 TIDSP_PATH_CSTUBS_SRC = @TIDSP_PATH_CSTUBS_SRC@
 TIDSP_PATH_OSAL_ROOT = @TIDSP_PATH_OSAL_ROOT@
 TIDSP_PATH_OSAL_SRC = @TIDSP_PATH_OSAL_SRC@
 TIDSP_PATH_RTCFG_SRC = @TIDSP_PATH_RTCFG_SRC@
+TIDSP_PRIVATE_CPPFLAGS_INCS = @TIDSP_PRIVATE_CPPFLAGS_INCS@
+TIDSP_PRIVATE_LDLIBS = @TIDSP_PRIVATE_LDLIBS@
 VERSION = @VERSION@
 abs_builddir = @abs_builddir@
 abs_srcdir = @abs_srcdir@
@@ -316,7 +313,7 @@ libcodecengine_client_la_SOURCES = $(top_srcdir)/src/main.c \
 					  $(TIDSP_PATH_OSAL_ROOT)/packages/xdcruntime/cstubs/LoggerFlex.c \
 					  $(TIDSP_PATH_OSAL_ROOT)/packages/xdcruntime/heaps/HeapStdAlign.c \
 					  $(TIDSP_PATH_OSAL_ROOT)/sources/xdc/runtime/xdc_init.cpp \
-					  $(TIDSP_PATH_OSAL_SRC)/preConfig_p$(TIDSP_GPP_ARCH_SUFFIX).c
+					  $(TIDSP_PATH_OSAL_SRC)/preConfig_pv5T.c
 
 all: all-am
 
@@ -441,7 +438,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/TimestampPosix.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/TimestampStd.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/main.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/preConfig_p$(TIDSP_GPP_ARCH_SUFFIX).Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/preConfig_pv5T.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/rtcfg.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/rtcfg_fcinit.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/rtcfg_remote_config.Plo@am__quote@
@@ -832,12 +829,12 @@ HeapStdAlign.lo: $(TIDSP_PATH_OSAL_ROOT)/packages/xdcruntime/heaps/HeapStdAlign.
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o HeapStdAlign.lo `test -f '$(TIDSP_PATH_OSAL_ROOT)/packages/xdcruntime/heaps/HeapStdAlign.c' || echo '$(srcdir)/'`$(TIDSP_PATH_OSAL_ROOT)/packages/xdcruntime/heaps/HeapStdAlign.c
 
-preConfig_p$(TIDSP_GPP_ARCH_SUFFIX).lo: $(TIDSP_PATH_OSAL_SRC)/preConfig_p$(TIDSP_GPP_ARCH_SUFFIX).c
-@am__fastdepCC_TRUE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT preConfig_p$(TIDSP_GPP_ARCH_SUFFIX).lo -MD -MP -MF $(DEPDIR)/preConfig_p$(TIDSP_GPP_ARCH_SUFFIX).Tpo -c -o preConfig_p$(TIDSP_GPP_ARCH_SUFFIX).lo `test -f '$(TIDSP_PATH_OSAL_SRC)/preConfig_p$(TIDSP_GPP_ARCH_SUFFIX).c' || echo '$(srcdir)/'`$(TIDSP_PATH_OSAL_SRC)/preConfig_p$(TIDSP_GPP_ARCH_SUFFIX).c
-@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/preConfig_p$(TIDSP_GPP_ARCH_SUFFIX).Tpo $(DEPDIR)/preConfig_p$(TIDSP_GPP_ARCH_SUFFIX).Plo
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='$(TIDSP_PATH_OSAL_SRC)/preConfig_p$(TIDSP_GPP_ARCH_SUFFIX).c' object='preConfig_p$(TIDSP_GPP_ARCH_SUFFIX).lo' libtool=yes @AMDEPBACKSLASH@
+preConfig_pv5T.lo: $(TIDSP_PATH_OSAL_SRC)/preConfig_pv5T.c
+@am__fastdepCC_TRUE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT preConfig_pv5T.lo -MD -MP -MF $(DEPDIR)/preConfig_pv5T.Tpo -c -o preConfig_pv5T.lo `test -f '$(TIDSP_PATH_OSAL_SRC)/preConfig_pv5T.c' || echo '$(srcdir)/'`$(TIDSP_PATH_OSAL_SRC)/preConfig_pv5T.c
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/preConfig_pv5T.Tpo $(DEPDIR)/preConfig_pv5T.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='$(TIDSP_PATH_OSAL_SRC)/preConfig_pv5T.c' object='preConfig_pv5T.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o preConfig_p$(TIDSP_GPP_ARCH_SUFFIX).lo `test -f '$(TIDSP_PATH_OSAL_SRC)/preConfig_p$(TIDSP_GPP_ARCH_SUFFIX).c' || echo '$(srcdir)/'`$(TIDSP_PATH_OSAL_SRC)/preConfig_p$(TIDSP_GPP_ARCH_SUFFIX).c
+@am__fastdepCC_FALSE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o preConfig_pv5T.lo `test -f '$(TIDSP_PATH_OSAL_SRC)/preConfig_pv5T.c' || echo '$(srcdir)/'`$(TIDSP_PATH_OSAL_SRC)/preConfig_pv5T.c
 
 .cpp.o:
 @am__fastdepCXX_TRUE@	$(CXXCOMPILE) -MT $@ -MD -MP -MF $(DEPDIR)/$*.Tpo -c -o $@ $<

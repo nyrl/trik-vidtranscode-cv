@@ -613,20 +613,18 @@ ac_subst_vars='am__EXEEXT_FALSE
 am__EXEEXT_TRUE
 LTLIBOBJS
 LIBOBJS
-PKGCONFIG_REQUIRES
 HAVE_VISIBILITY
 CFLAG_VISIBILITY
 TIDSP_PATH_OSAL_ROOT
 TIDSP_PATH_OSAL_SRC
 TIDSP_PATH_CSTUBS_SRC
 TIDSP_PATH_RTCFG_SRC
-TIDSP_GPP_ARCH_SUFFIX
-TIDSP_GPP_ARCH
-TIDSP_CPPFLAGS_PRIV
-TIDSP_CPPFLAGS
-TIDSP_CPPFLAGS_INCS_PRIV
-TIDSP_CPPFLAGS_INCS
-TIDSP_CPPFLAGS_DEFS
+TIDSP_PRIVATE_LDLIBS
+TIDSP_EXPORT_LDLIBS
+TIDSP_EXPORT_LDFLAGS
+TIDSP_PRIVATE_CPPFLAGS_INCS
+TIDSP_EXPORT_CPPFLAGS_INCS
+TIDSP_EXPORT_CPPFLAGS_DEFS
 PKG_CONFIG_LIBDIR
 PKG_CONFIG_PATH
 PKG_CONFIG
@@ -757,12 +755,13 @@ with_gnu_ld
 with_sysroot
 enable_libtool_lock
 enable_assert
-with_ti_dsp_gpp_arch
 with_ti_dsp_xdctools
 with_ti_dsp_xdais
 with_ti_dsp_ce
 with_ti_dsp_fc
 with_ti_dsp_osal
+with_ti_dsp_cmem
+with_ti_dsp_syslink
 '
       ac_precious_vars='build_alias
 host_alias
@@ -1418,8 +1417,6 @@ Optional Packages:
   --with-gnu-ld           assume the C compiler uses GNU ld [default=no]
   --with-sysroot=DIR Search for dependent libraries within DIR
                         (or the compiler's sysroot if not specified).
-  --with-ti-dsp-gpp-arch=arch
-                          define location of TI DSP SDK
   --with-ti-dsp-xdctools=path
                           define location of TI DSP XDC Tools
   --with-ti-dsp-xdais=path
@@ -1427,6 +1424,9 @@ Optional Packages:
   --with-ti-dsp-ce=path   define location of TI DSP Codec Engine
   --with-ti-dsp-fc=path   define location of TI DSP Framework Components
   --with-ti-dsp-osal=path define location of TI DSP OSAL
+  --with-ti-dsp-cmem=path define location of TI DSP CMEM (LinuxUtils)
+  --with-ti-dsp-syslink=path
+                          define location of TI DSP SysLink
 
 Some influential environment variables:
   CC          C compiler command
@@ -16553,18 +16553,6 @@ fi
 
 # Codec engine and related stuff paths configuration
 
-# Check whether --with-ti-dsp-gpp-arch was given.
-if test "${with_ti_dsp_gpp_arch+set}" = set; then :
-  withval=$with_ti_dsp_gpp_arch;
-else
-  with_ti_dsp_gpp_arch="no"
-fi
-
-if test "x$with_ti_dsp_gpp_arch" = xno; then :
-  as_fn_error $? "TI DSP GPP architecture must be defined" "$LINENO" 5
-fi
-with_ti_dsp_gpp_arch_suffix=${with_ti_dsp_gpp_arch#GCArm}
-
 # Check whether --with-ti-dsp-xdctools was given.
 if test "${with_ti_dsp_xdctools+set}" = set; then :
   withval=$with_ti_dsp_xdctools;
@@ -16620,17 +16608,42 @@ if test "x$with_ti_dsp_osal" = xno; then :
   as_fn_error $? "TI DSP OSAL path must be defined" "$LINENO" 5
 fi
 
-TIDSP_CPPFLAGS_DEFS="-Dxdc_target_types__=gnu/targets/arm/std.h -Dxdc_target_name__=$with_ti_dsp_gpp_arch"
+# Check whether --with-ti-dsp-cmem was given.
+if test "${with_ti_dsp_cmem+set}" = set; then :
+  withval=$with_ti_dsp_cmem;
+else
+  with_ti_dsp_cmem="no"
+fi
 
-TIDSP_CPPFLAGS_INCS="-I${with_ti_dsp_xdctools}/packages -I${with_ti_dsp_xdais}/packages -I${with_ti_dsp_ce}/packages"
+if test "x$with_ti_dsp_cmem" = xno; then :
+  as_fn_error $? "TI DSP CMEM (LinuxUtils) path must be defined" "$LINENO" 5
+fi
 
-TIDSP_CPPFLAGS_INCS_PRIV="-I${with_ti_dsp_fc}/packages -I${with_ti_dsp_osal}/packages"
+# Check whether --with-ti-dsp-syslink was given.
+if test "${with_ti_dsp_syslink+set}" = set; then :
+  withval=$with_ti_dsp_syslink;
+else
+  with_ti_dsp_syslink="no"
+fi
 
-TIDSP_CPPFLAGS="${TIDSP_CPPFLAGS_DEFS} ${TIDSP_CPPFLAGS_INCS}"
+if test "x$with_ti_dsp_syslink" = xno; then :
+  as_fn_error $? "TI DSP SysLink path must be defined" "$LINENO" 5
+fi
 
-TIDSP_CPPFLAGS_PRIV="${TIDSP_CPPFLAGS_INCS_PRIV}"
+TIDSP_EXPORT_CPPFLAGS_DEFS="-Dxdc_target_types__=gnu/targets/arm/std.h -Dxdc_target_name__=GCArmv5T"
 
-CPPFLAGS+=" ${TIDSP_CPPFLAGS} ${TIDSP_CPPFLAGS_PRIV}"
+TIDSP_EXPORT_CPPFLAGS_INCS="-I${with_ti_dsp_xdctools}/packages -I${with_ti_dsp_xdais}/packages -I${with_ti_dsp_ce}/packages"
+
+TIDSP_PRIVATE_CPPFLAGS_INCS="-I${with_ti_dsp_fc}/packages -I${with_ti_dsp_osal}/packages"
+
+TIDSP_EXPORT_LDFLAGS="-L${with_ti_dsp_xdctools}/packages -L${with_ti_dsp_xdais}/packages -L${with_ti_dsp_ce}/packages -L${with_ti_dsp_fc}/packages -L${with_ti_dsp_osal}/packages -L${with_ti_dsp_cmem}/packages -L${with_ti_dsp_syslink}/packages"
+
+TIDSP_EXPORT_LDLIBS="${with_ti_dsp_ce}/packages/ti/sdo/ce/utils/rtcfg/linux/OMAPL138/ce_remote_release.cmd ${with_ti_dsp_ce}/packages/ti/sdo/ce/utils/rtcfg/linux/OMAPL138/fc_release.cmd"
+
+TIDSP_PRIVATE_LDLIBS="-lpthread -lrt -ldl"
+
+CPPFLAGS+=" ${TIDSP_EXPORT_CPPFLAGS_DEFS} ${TIDSP_EXPORT_CPPFLAGS_INCS} ${TIDSP_PRIVATE_CPPFLAGS_INCS}"
+LDFLAGS+=" ${TIDSP_PRIVATE_LDLIBS}"
 
 for ac_header in xdc/std.h
 do :
@@ -16663,10 +16676,6 @@ fi
 done
 
 
-TIDSP_GPP_ARCH=${with_ti_dsp_gpp_arch}
-
-TIDSP_GPP_ARCH_SUFFIX=${with_ti_dsp_gpp_arch_suffix}
-
 TIDSP_PATH_RTCFG_SRC=${with_ti_dsp_ce}/packages/ti/sdo/ce/utils/rtcfg
 
 TIDSP_PATH_CSTUBS_SRC=${with_ti_dsp_osal}/packages/linuxdist/cstubs
@@ -16675,8 +16684,6 @@ TIDSP_PATH_OSAL_SRC=${with_ti_dsp_osal}/packages/linuxdist/preconfig/production
 
 TIDSP_PATH_OSAL_ROOT=${with_ti_dsp_osal}
 
-{ $as_echo "$as_me:${as_lineno-$LINENO}: GPP arch is ${TIDSP_GPP_ARCH}, arch suffix is ${TIDSP_GPP_ARCH_SUFFIX}" >&5
-$as_echo "$as_me: GPP arch is ${TIDSP_GPP_ARCH}, arch suffix is ${TIDSP_GPP_ARCH_SUFFIX}" >&6;}
 
 
 # Checks for library functions.
@@ -16768,15 +16775,14 @@ _ACEOF
 
 
 # Check for pkgconfig dependencies and setup flags
-PKGCONFIG_REQUIRES=""
-
-
+#PKGCONFIG_REQUIRES=""
+#AC_SUBST([PKGCONFIG_REQUIRES])
 #PKG_CHECK_MODULES([PKGCONFIG], [${PKGCONFIG_REQUIRES}])
 #CPPFLAGS+=" ${PKGCONFIG_CFLAGS}"
 #LIBS+=" ${PKGCONFIG_LIBS}"
 
 
-ac_config_files="$ac_config_files Makefile build/Makefile build/cstubs/Makefile build/osal/Makefile ${PACKAGE}.pc"
+ac_config_files="$ac_config_files Makefile build/Makefile ${PACKAGE}.pc"
 
 
 cat >confcache <<\_ACEOF
@@ -17896,8 +17902,6 @@ do
     "libtool") CONFIG_COMMANDS="$CONFIG_COMMANDS libtool" ;;
     "Makefile") CONFIG_FILES="$CONFIG_FILES Makefile" ;;
     "build/Makefile") CONFIG_FILES="$CONFIG_FILES build/Makefile" ;;
-    "build/cstubs/Makefile") CONFIG_FILES="$CONFIG_FILES build/cstubs/Makefile" ;;
-    "build/osal/Makefile") CONFIG_FILES="$CONFIG_FILES build/osal/Makefile" ;;
     "${PACKAGE}.pc") CONFIG_FILES="$CONFIG_FILES ${PACKAGE}.pc" ;;
 
   *) as_fn_error $? "invalid argument: \`$ac_config_target'" "$LINENO" 5;;
