@@ -620,7 +620,6 @@ TIDSP_PATH_OSAL_ROOT
 TIDSP_PATH_OSAL_SRC
 TIDSP_PATH_CSTUBS_SRC
 TIDSP_PATH_RTCFG_SRC
-TIDSP_PRIVATE_LDLIBS
 TIDSP_EXPORT_LDLIBS
 TIDSP_EXPORT_LDFLAGS
 TIDSP_PRIVATE_CPPFLAGS_INCS
@@ -16801,10 +16800,9 @@ TIDSP_EXPORT_LDFLAGS="-L${with_ti_dsp_xdctools}/packages -L${with_ti_dsp_xdais}/
 
 TIDSP_EXPORT_LDLIBS="-Wl,--start-group -lcodecengine-client ${with_ti_dsp_ce}/packages/ti/sdo/ce/utils/rtcfg/linux/OMAPL138/ce_remote_release.cmd ${with_ti_dsp_ce}/packages/ti/sdo/ce/utils/rtcfg/linux/OMAPL138/fc_release.cmd -Wl,--end-group -lpthread -lrt -ldl"
 
-TIDSP_PRIVATE_LDLIBS="-lpthread -lrt -ldl"
-
+#AC_SUBST([TIDSP_PRIVATE_LDLIBS], ["-lpthread -lrt -ldl"])
 CPPFLAGS+=" ${TIDSP_EXPORT_CPPFLAGS_DEFS} ${TIDSP_EXPORT_CPPFLAGS_INCS} ${TIDSP_PRIVATE_CPPFLAGS_INCS}"
-LDFLAGS+=" ${TIDSP_PRIVATE_LDLIBS}"
+#LDFLAGS+=" ${TIDSP_PRIVATE_LDLIBS}"
 
 for ac_header in xdc/std.h
 do :
