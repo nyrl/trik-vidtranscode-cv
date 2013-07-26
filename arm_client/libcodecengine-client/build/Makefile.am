@@ -2,13 +2,22 @@ AM_CPPFLAGS		= -I$(top_srcdir)/include -Wall -Wextra -Wno-unused-parameter -Wno-
 
 LDADD			= libcodecengine-client.la
 
+
 lib_LTLIBRARIES 	= libcodecengine-client.la
+
 nodist_libcodecengine_client_la_SOURCES	= $(top_srcdir)/config.h
-libcodecengine_client_la_SOURCES	= $(top_srcdir)/src/main.c \
+libcodecengine_client_la_SOURCES	= $(top_srcdir)/src/main.c
+libcodecengine_client_la_LIBADD		= libpriv_rtcfg.la libpriv_osal.la libpriv_cstubs.la
+
+
+noinst_LTLIBRARIES	= libpriv_rtcfg.la libpriv_osal.la libpriv_cstubs.la
+
+libpriv_rtcfg_la_SOURCES		= \
 					  $(TIDSP_PATH_RTCFG_SRC)/rtcfg.c \
 					  $(TIDSP_PATH_RTCFG_SRC)/rtcfg_fcinit.c \
-					  $(TIDSP_PATH_RTCFG_SRC)/rtcfg_remote_config.c \
-					  $(TIDSP_PATH_CSTUBS_SRC)/LoggerPosix.c \
+					  $(TIDSP_PATH_RTCFG_SRC)/rtcfg_remote_config.c
+
+libpriv_osal_la_SOURCES			= \
 					  $(TIDSP_PATH_OSAL_ROOT)/sources/xdc/runtime/Assert.c \
 					  $(TIDSP_PATH_OSAL_ROOT)/sources/xdc/runtime/Core-label.c \
 					  $(TIDSP_PATH_OSAL_ROOT)/sources/xdc/runtime/Core-mem.c \
@@ -59,12 +68,16 @@ libcodecengine_client_la_SOURCES	= $(top_srcdir)/src/main.c \
 					  $(TIDSP_PATH_OSAL_ROOT)/sources/xdc/runtime/xdc_init.cpp \
 					  $(TIDSP_PATH_OSAL_SRC)/preConfig_pv5T.c
 
+libpriv_cstubs_la_SOURCES		= \
+					  $(TIDSP_PATH_CSTUBS_SRC)/LoggerPosix.c
 
 
 
-TESTS					= test_cmem_alloc
+#TESTS					= test_cmem_alloc
 
-noinst_PROGRAMS				= $(TESTS)
+#noinst_PROGRAMS				= $(TESTS)
 
-test_cmem_alloc_SOURCES			= $(top_srcdir)/tests/test_cmem_alloc.c
+#test_cmem_alloc_SOURCES			= $(top_srcdir)/tests/test_cmem_alloc.c
+#test_cmem_alloc_LDFLAGS			= $(LDFLAGS) $(TIDSP_EXPORT_LDFLAGS)
+#test_cmem_alloc_LDADD			= $(LDADD) $(TIDSP_EXPORT_LDLIBS)
 
