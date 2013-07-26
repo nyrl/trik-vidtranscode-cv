@@ -56,12 +56,12 @@ AS_IF([test "x$with_ti_dsp_cmem" = xno], [AC_MSG_ERROR([TI DSP CMEM (LinuxUtils)
 AC_ARG_WITH([ti-dsp-syslink],[AS_HELP_STRING([--with-ti-dsp-syslink=path],[define location of TI DSP SysLink])],,[with_ti_dsp_syslink="no"])
 AS_IF([test "x$with_ti_dsp_syslink" = xno], [AC_MSG_ERROR([TI DSP SysLink path must be defined])])
 
-AC_SUBST([TIDSP_EXPORT_CPPFLAGS_DEFS], "-Dxdc_target_types__=gnu/targets/arm/std.h -Dxdc_target_name__=GCArmv5T")
-AC_SUBST([TIDSP_EXPORT_CPPFLAGS_INCS], "-I${with_ti_dsp_xdctools}/packages -I${with_ti_dsp_xdais}/packages -I${with_ti_dsp_ce}/packages")
-AC_SUBST([TIDSP_PRIVATE_CPPFLAGS_INCS], "-I${with_ti_dsp_fc}/packages -I${with_ti_dsp_osal}/packages")
-AC_SUBST([TIDSP_EXPORT_LDFLAGS], "-L${with_ti_dsp_xdctools}/packages -L${with_ti_dsp_xdais}/packages -L${with_ti_dsp_ce}/packages -L${with_ti_dsp_fc}/packages -L${with_ti_dsp_osal}/packages -L${with_ti_dsp_cmem}/packages -L${with_ti_dsp_syslink}/packages")
-AC_SUBST([TIDSP_EXPORT_LDLIBS], "${with_ti_dsp_ce}/packages/ti/sdo/ce/utils/rtcfg/linux/OMAPL138/ce_remote_release.cmd ${with_ti_dsp_ce}/packages/ti/sdo/ce/utils/rtcfg/linux/OMAPL138/fc_release.cmd")
-AC_SUBST([TIDSP_PRIVATE_LDLIBS], "-lpthread -lrt -ldl")
+AC_SUBST([TIDSP_EXPORT_CPPFLAGS_DEFS], ["-Dxdc_target_types__=gnu/targets/arm/std.h -Dxdc_target_name__=GCArmv5T"])
+AC_SUBST([TIDSP_EXPORT_CPPFLAGS_INCS], ["-I${with_ti_dsp_xdctools}/packages -I${with_ti_dsp_xdais}/packages -I${with_ti_dsp_ce}/packages"])
+AC_SUBST([TIDSP_PRIVATE_CPPFLAGS_INCS], ["-I${with_ti_dsp_fc}/packages -I${with_ti_dsp_osal}/packages"])
+AC_SUBST([TIDSP_EXPORT_LDFLAGS], ["-L${with_ti_dsp_xdctools}/packages -L${with_ti_dsp_xdais}/packages -L${with_ti_dsp_ce}/packages -L${with_ti_dsp_fc}/packages -L${with_ti_dsp_osal}/packages -L${with_ti_dsp_cmem}/packages -L${with_ti_dsp_syslink}/packages"])
+AC_SUBST([TIDSP_EXPORT_LDLIBS], ["-Wl,--start-group -lcodecengine-client ${with_ti_dsp_ce}/packages/ti/sdo/ce/utils/rtcfg/linux/OMAPL138/ce_remote_release.cmd ${with_ti_dsp_ce}/packages/ti/sdo/ce/utils/rtcfg/linux/OMAPL138/fc_release.cmd -Wl,--end-group -lpthread -lrt -ldl"])
+AC_SUBST([TIDSP_PRIVATE_LDLIBS], ["-lpthread -lrt -ldl"])
 CPPFLAGS+=" ${TIDSP_EXPORT_CPPFLAGS_DEFS} ${TIDSP_EXPORT_CPPFLAGS_INCS} ${TIDSP_PRIVATE_CPPFLAGS_INCS}"
 LDFLAGS+=" ${TIDSP_PRIVATE_LDLIBS}"
 

@@ -16639,7 +16639,7 @@ TIDSP_PRIVATE_CPPFLAGS_INCS="-I${with_ti_dsp_fc}/packages -I${with_ti_dsp_osal}/
 
 TIDSP_EXPORT_LDFLAGS="-L${with_ti_dsp_xdctools}/packages -L${with_ti_dsp_xdais}/packages -L${with_ti_dsp_ce}/packages -L${with_ti_dsp_fc}/packages -L${with_ti_dsp_osal}/packages -L${with_ti_dsp_cmem}/packages -L${with_ti_dsp_syslink}/packages"
 
-TIDSP_EXPORT_LDLIBS="${with_ti_dsp_ce}/packages/ti/sdo/ce/utils/rtcfg/linux/OMAPL138/ce_remote_release.cmd ${with_ti_dsp_ce}/packages/ti/sdo/ce/utils/rtcfg/linux/OMAPL138/fc_release.cmd"
+TIDSP_EXPORT_LDLIBS="-Wl,--start-group -lcodecengine-client ${with_ti_dsp_ce}/packages/ti/sdo/ce/utils/rtcfg/linux/OMAPL138/ce_remote_release.cmd ${with_ti_dsp_ce}/packages/ti/sdo/ce/utils/rtcfg/linux/OMAPL138/fc_release.cmd -Wl,--end-group -lpthread -lrt -ldl"
 
 TIDSP_PRIVATE_LDLIBS="-lpthread -lrt -ldl"
 
