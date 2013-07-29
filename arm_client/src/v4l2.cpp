@@ -20,6 +20,7 @@ namespace trik
 namespace
 {
 
+
 class V4L2FdHandle
 {
   public:
@@ -84,6 +85,7 @@ class V4L2FdHandle
     V4L2FdHandle& operator=(const V4L2FdHandle&) = delete;
 };
 
+
 } // namespace unnamed
 
 
@@ -101,6 +103,9 @@ class V4L2::Handle
 
       if (!setFormat(_imageFormat))
         return;
+
+
+#warning TODO set
 
 #warning TODO image format
 
@@ -122,6 +127,36 @@ class V4L2::Handle
     v4l2_format  m_v4l2Format;
     ImageFormat  m_imageFormat;
 
+    bool reportEmulatedFormats()
+    {
+      for (size_t fmtIdx = 0; ; ++fmtIdx)
+      {
+        v4l2_fmtdesc fmtDesc;
+        fmtDesc.index = fmtIdx;
+        fmtDesc.type = m_v4l2Format.type;
+
+        int err;
+        if (!m_fd.ioctl(VIDIOC_ENUM_FMT, &fmtDesc, false, &err))
+        {
+          if (err != EINVAL)
+          {
+            qWarning() << "v4l2_ioctl(VIDIOC_ENUM_FMT) failed:" << err;
+            return false;
+          }
+          break;
+        }
+
+        if (fmtDesc.pixelformat == m_v4l2Format.fmt.pix.pixelformat)
+        {
+          if (fmtDesc.flags & V4L2_FMT_FLAG_EMULATED)
+            qWarning() << "V4L2 format" << FormatID(m_v4l2Format.fmt.pix.pixelformat).toString() << "is emulated, performance will be degraded";
+
+          break;
+        }
+      }
+      return true;
+    }
+
     bool setFormat(const ImageFormat& _imageFormat)
     {
       static const v4l2_format s_zeroFormat = v4l2_format();
@@ -130,7 +165,7 @@ class V4L2::Handle
       m_v4l2Format.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
       m_v4l2Format.fmt.pix.width       = _imageFormat.m_width;
       m_v4l2Format.fmt.pix.height      = _imageFormat.m_height;
-      m_v4l2Format.fmt.pix.pixelformat = _imageFormat.m_format;
+      m_v4l2Format.fmt.pix.pixelformat = _imageFormat.m_format.id();
 #warning TODO setup field
 #if 0
       m_v4l2Format.fmt.pix.field       = V4L2_FIELD_NONE;
@@ -139,9 +174,18 @@ class V4L2::Handle
       if (!m_fd.ioctl(VIDIOC_S_FMT, &m_v4l2Format))
         return false;
 
-#warning TODO warn about emulated format; report pix field; remind format
+#warning TEMPORARY
+#if 1
+      qDebug() << "V4L2 pix field" << m_v4l2Format.fmt.pix.field;
+#endif
 
-      return true;
+      m_imageFormat.m_width      = m_v4l2Format.fmt.pix.width;
+      m_imageFormat.m_height     = m_v4l2Format.fmt.pix.height;
+      m_imageFormat.m_format     = FormatID(m_v4l2Format.fmt.pix.pixelformat);
+      m_imageFormat.m_lineLength = m_v4l2Format.fmt.pix.bytesperline;
+      m_imageFormat.m_size       = m_v4l2Format.fmt.pix.sizeimage;
+
+      return reportEmulatedFormats();
     }
 
     Handle(const Handle&) = delete;
