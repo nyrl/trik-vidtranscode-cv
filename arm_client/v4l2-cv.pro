@@ -12,14 +12,16 @@ TARGET  = v4l2-cv
 
 INCLUDEPATH += include
 SOURCES += src/main.cpp \
+           src/v4l2.cpp \
            src/codecengine.cpp
 HEADERS += include/internal/main.h \
+           include/internal/v4l2.h \
            include/internal/codecengine.h
 
 
 unix {
     CONFIG += link_pkgconfig
-    PKGCONFIG += "'libcodecengine-client >= 0.0.1'"
+    PKGCONFIG += "'libcodecengine-client >= 0.0.1 libv4l2 >= 0.9.0'"
 
     target.path = $$[INSTALL_ROOT]/bin
     INSTALLS += target
