@@ -7,6 +7,11 @@
 #include <QScopedPointer>
 #include <inttypes.h>
 
+#include "internal/image.h"
+
+
+namespace trik
+{
 
 class V4L2 : public QObject
 {
@@ -14,16 +19,6 @@ class V4L2 : public QObject
   public:
     explicit V4L2(QObject* _parent);
     virtual ~V4L2();
-
-    struct ImageFormat
-    {
-      ImageFormat() : m_width(-1), m_height(-1), m_format(), m_lineLength(), m_size() {}
-      int16_t  m_width;
-      int16_t  m_height;
-      uint32_t m_format;
-      size_t   m_lineLength;
-      size_t   m_size;
-    };
 
   signals:
     void opened();
@@ -47,6 +42,8 @@ class V4L2 : public QObject
     ImageFormat m_formatConfigured;
     ImageFormat m_formatActual;
 };
+
+} // namespace trik
 
 
 #endif // !VIDTRANSCODE_CV_ARM_CLIENT_INCLUDE_INTERNAL_V4L2_H_

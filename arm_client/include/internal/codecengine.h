@@ -7,6 +7,9 @@
 #include <QScopedPointer>
 
 
+namespace trik
+{
+
 class CodecEngine : public QObject
 {
   Q_OBJECT
@@ -37,6 +40,8 @@ class CodecEngine : public QObject
     QString m_serverName;
     QString m_serverPath;
 };
+
+} // namespace trik
 
 
 #endif // !VIDTRANSCODE_CV_ARM_CLIENT_INCLUDE_INTERNAL_CODECENGINE_H_

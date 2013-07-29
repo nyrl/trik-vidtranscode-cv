@@ -15,6 +15,7 @@ SOURCES += src/main.cpp \
            src/v4l2.cpp \
            src/codecengine.cpp
 HEADERS += include/internal/main.h \
+           include/internal/image.h \
            include/internal/v4l2.h \
            include/internal/codecengine.h
 

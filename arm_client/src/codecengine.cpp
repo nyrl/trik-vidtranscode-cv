@@ -9,6 +9,8 @@
 
 
 
+namespace trik
+{
 
 class CodecEngine::EngineControl
 {
@@ -191,3 +193,5 @@ CodecEngine::reportLoad()
 
   qDebug() << "DSP load" << Server_getCpuLoad(serverHandle);
 }
+
+} // namespace trik
