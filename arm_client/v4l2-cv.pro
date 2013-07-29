@@ -11,8 +11,10 @@ debug:CONFIG += console
 TARGET  = v4l2-cv
 
 INCLUDEPATH += include
-SOURCES += src/main.cpp
-HEADERS += include/internal/main.h
+SOURCES += src/main.cpp \
+           src/codecengine.cpp
+HEADERS += include/internal/main.h \
+           include/internal/codecengine.h
 
 
 unix {
