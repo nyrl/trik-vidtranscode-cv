@@ -1,6 +1,5 @@
 #include "internal/codecengine.h"
 
-#include <QtGlobal>
 #include <QDebug>
 #include <QMutex>
 #include <QMutexLocker>
@@ -66,23 +65,31 @@ class CodecEngine::Handle
 {
   public:
     Handle(const QString& _serverName)
-     :m_h(0),
+     :m_engineHandle(0),
+      m_serverHandle(0),
       m_opened(false)
     {
       QByteArray serverName(_serverName.toLocal8Bit()); // pin temporary, convert to char*
 
       Engine_Error ceError;
-      m_h = Engine_open(serverName.data(), NULL, &ceError);
-      if (!m_h)
+      m_engineHandle = Engine_open(serverName.data(), NULL, &ceError);
+      if (!m_engineHandle)
+      {
         qWarning() << "Engine_open(" << _serverName << ") failed:" << ceError;
-      else
-        m_opened = true;
+        return;
+      }
+
+      m_serverHandle = Engine_getServer(m_engineHandle);
+      if (!m_serverHandle)
+        qWarning() << "Engine_getServer(" << _serverName << ") failed";
+
+      m_opened = true;
     }
 
     ~Handle()
     {
-      if (m_opened)
-        Engine_close(m_h);
+      if (m_engineHandle)
+        Engine_close(m_engineHandle);
     }
 
     bool opened() const
@@ -90,8 +97,19 @@ class CodecEngine::Handle
       return m_opened;
     }
 
+    Engine_Handle engineHandle() const
+    {
+      return m_engineHandle;
+    }
+
+    Server_Handle serverHandle() const
+    {
+      return m_serverHandle;
+    }
+
   private:
-    Engine_Handle m_h;
+    Engine_Handle m_engineHandle;
+    Server_Handle m_serverHandle;
     bool          m_opened;
 
     Handle(const Handle&) = delete;
@@ -106,8 +124,8 @@ CodecEngine::EngineControl CodecEngine::s_engineControl;
 CodecEngine::CodecEngine(QObject* _parent)
  :QObject(_parent),
   m_handle(),
-  m_serverName("dsp-server"),
-  m_serverPath("dsp-server")
+  m_serverName("dsp_server"),
+  m_serverPath("dsp_server.bin")
 {
   s_engineControl.init();
 }
@@ -148,6 +166,7 @@ CodecEngine::open()
     return false;
   }
 
+  emit opened();
   return true;
 }
 
@@ -155,6 +174,20 @@ bool
 CodecEngine::close()
 {
   m_handle.reset();
+
+  emit closed();
   return true;
 }
 
+void
+CodecEngine::reportLoad()
+{
+  Server_Handle serverHandle = m_handle->serverHandle();
+  if (!serverHandle)
+  {
+    qWarning() << "Cannot report DSP load, server handle is not available";
+    return;
+  }
+
+  qDebug() << "DSP load" << Server_getCpuLoad(serverHandle);
+}

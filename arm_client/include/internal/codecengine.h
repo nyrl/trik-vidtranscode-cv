@@ -1,6 +1,7 @@
 #ifndef VIDTRANSCODE_CV_ARM_CLIENT_INCLUDE_INTERNAL_CODECENGINE_H_
 #define VIDTRANSCODE_CV_ARM_CLIENT_INCLUDE_INTERNAL_CODECENGINE_H_
 
+#include <QtGlobal>
 #include <QObject>
 #include <QString>
 #include <QScopedPointer>
@@ -24,6 +25,7 @@ class CodecEngine : public QObject
     bool open();
     bool close();
 
+    void reportLoad();
 
   private:
     class EngineControl;
