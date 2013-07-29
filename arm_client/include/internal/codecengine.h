@@ -26,11 +26,8 @@ class CodecEngine : public QObject
 
 
   private:
-    class EngineRuntimeInit;
-    static EngineRuntimeInit s_engineRuntimeInit;
-
-    class EngineRegistry;
-    static EngineRegistry s_engineRegistry;
+    class EngineControl;
+    static EngineControl s_engineControl;
 
     class Handle;
     QScopedPointer<Handle> m_handle;

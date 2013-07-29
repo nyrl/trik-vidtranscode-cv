@@ -10,24 +10,23 @@
 
 
 
-class CodecEngine::EngineRuntimeInit
+
+class CodecEngine::EngineControl
 {
   public:
-    EngineRuntimeInit()
+    EngineControl() : m_lock(), m_init(false) {}
+
+    void init()
     {
-      CERuntime_init();
+      QMutexLocker locker(&m_lock);
+      if (!m_init)
+      {
+        m_init = true;
+        CERuntime_init();
+      }
     }
-};
 
-
-
-
-class CodecEngine::EngineRegistry
-{
-  public:
-    EngineRegistry() : m_lock() {}
-
-    bool addEngine(const QString& _serverName, const QString& _serverPath)
+    bool registerEngine(const QString& _serverName, const QString& _serverPath)
     {
       QByteArray serverName(_serverName.toLocal8Bit()); // pin temporary and make it char*
       QByteArray serverPath(_serverPath.toLocal8Bit()); // pin temporary and make it char*
@@ -57,6 +56,7 @@ class CodecEngine::EngineRegistry
 
   private:
     QMutex     m_lock;
+    bool       m_init;
 };
 
 
@@ -101,8 +101,7 @@ class CodecEngine::Handle
 
 
 
-CodecEngine::EngineRuntimeInit CodecEngine::s_engineRuntimeInit;
-CodecEngine::EngineRegistry CodecEngine::s_engineRegistry;
+CodecEngine::EngineControl CodecEngine::s_engineControl;
 
 CodecEngine::CodecEngine(QObject* _parent)
  :QObject(_parent),
@@ -110,6 +109,7 @@ CodecEngine::CodecEngine(QObject* _parent)
   m_serverName("dsp-server"),
   m_serverPath("dsp-server")
 {
+  s_engineControl.init();
 }
 
 CodecEngine::~CodecEngine()
@@ -138,7 +138,7 @@ CodecEngine::open()
     return true;
   }
 
-  s_engineRegistry.addEngine(m_serverName, m_serverPath);
+  s_engineControl.registerEngine(m_serverName, m_serverPath);
 
   m_handle.reset(new Handle(m_serverName));
   if (!m_handle->opened())
