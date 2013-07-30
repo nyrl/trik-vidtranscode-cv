@@ -112,21 +112,6 @@ class V4L2BufferMapperMemoryMmap : public V4L2BufferMapper
 
 
 
-int
-V4L2BufferMapper::v4l2_fd(V4L2* _v4l2)
-{
-  return _v4l2->fd();
-}
-
-bool
-V4L2BufferMapper::v4l2_ioctl(V4L2* _v4l2, int _request, void* _argp, bool _reportError, int* _errno)
-{
-  return _v4l2->fd_ioctl(_request, _argp, _reportError, _errno);
-}
-
-
-
-
 class V4L2::FdHandle
 {
   public:
@@ -296,6 +281,21 @@ class V4L2::FormatHandler
     FormatHandler(const FormatHandler&) = delete;
     FormatHandler& operator=(const FormatHandler&) = delete;
 };
+
+
+
+
+int
+V4L2BufferMapper::v4l2_fd(V4L2* _v4l2)
+{
+  return _v4l2->fd();
+}
+
+bool
+V4L2BufferMapper::v4l2_ioctl(V4L2* _v4l2, int _request, void* _argp, bool _reportError, int* _errno)
+{
+  return _v4l2->fd_ioctl(_request, _argp, _reportError, _errno);
+}
 
 
 
