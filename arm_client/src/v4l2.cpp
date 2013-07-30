@@ -17,14 +17,11 @@
 namespace trik
 {
 
-namespace
-{
 
-
-class V4L2FdHandle
+class V4L2::FdHandle
 {
   public:
-    V4L2FdHandle(const QString& _path)
+    explicit FdHandle(const QString& _path)
      :m_fd(-1),
       m_opened(false)
     {
@@ -40,7 +37,7 @@ class V4L2FdHandle
       m_opened = true;
     }
 
-    ~V4L2FdHandle()
+    ~FdHandle()
     {
       if (m_fd)
         v4l2_close(m_fd);
@@ -51,12 +48,12 @@ class V4L2FdHandle
       return m_opened;
     }
 
-    bool ioctl(int _request, void* _argp, bool _reportError = true, int* _err = NULL)
+    bool ioctl(int _request, void* _argp, bool _reportError, int* _errno)
     {
       if (!m_opened)
       {
-        if (_err)
-          *_err = ENOTCONN;
+        if (_errno)
+          *_errno = ENOTCONN;
         if (_reportError)
           qWarning() << "v4l2_ioctl(" << _request << ") attempt on closed device";
         return false;
@@ -64,15 +61,15 @@ class V4L2FdHandle
 
       if (v4l2_ioctl(m_fd, _request, _argp) == -1)
       {
-        if (_err)
-          *_err = errno;
+        if (_errno)
+          *_errno = errno;
         if (_reportError)
           qWarning() << "v4l2_ioctl(" << _request << ") failed:" << errno;
         return false;
       }
 
-      if (_err)
-        *_err = 0;
+      if (_errno)
+        *_errno = 0;
 
       return true;
     }
@@ -81,39 +78,32 @@ class V4L2FdHandle
     int  m_fd;
     bool m_opened;
 
-    V4L2FdHandle(const V4L2FdHandle&) = delete;
-    V4L2FdHandle& operator=(const V4L2FdHandle&) = delete;
+    FdHandle(const FdHandle&) = delete;
+    FdHandle& operator=(const FdHandle&) = delete;
 };
 
 
-} // namespace unnamed
 
 
-class V4L2::Handle
+class V4L2::FormatHandler
 {
   public:
-    Handle(const QString& _path, const ImageFormat& _imageFormat)
-     :m_fd(_path),
+    explicit FormatHandler(V4L2* _v4l2, const ImageFormat& _imageFormat)
+     :m_v4l2(_v4l2),
       m_opened(false),
       m_v4l2Format(),
       m_imageFormat()
     {
-      if (!m_fd.opened())
-        return;
-
       if (!setFormat(_imageFormat))
         return;
 
+      if (!reportEmulatedFormats())
+        return;
 
-#warning TODO set
-
-#warning TODO image format
+      if (!fetchFormat())
+        return;
 
       m_opened = true;
-    }
-
-    ~Handle()
-    {
     }
 
     bool opened() const
@@ -121,13 +111,51 @@ class V4L2::Handle
       return m_opened;
     }
 
+    const ImageFormat& imageFormat() const
+    {
+      return m_imageFormat;
+    }
+
   private:
-    V4L2FdHandle m_fd;
+    V4L2*        m_v4l2;
     bool         m_opened;
     v4l2_format  m_v4l2Format;
     ImageFormat  m_imageFormat;
 
-    bool reportEmulatedFormats()
+    bool setFormat(const ImageFormat& _imageFormat)
+    {
+      m_v4l2Format.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+      m_v4l2Format.fmt.pix.width       = _imageFormat.m_width;
+      m_v4l2Format.fmt.pix.height      = _imageFormat.m_height;
+      m_v4l2Format.fmt.pix.pixelformat = _imageFormat.m_format.id();
+#warning TODO setup field
+#if 0
+      m_v4l2Format.fmt.pix.field       = V4L2_FIELD_NONE;
+#endif
+
+      if (!m_v4l2->fd_ioctl(VIDIOC_S_FMT, &m_v4l2Format))
+        return false;
+
+#warning TEMPORARY
+#if 1
+      qDebug() << "V4L2 pix field" << m_v4l2Format.fmt.pix.field;
+#endif
+
+      return true;
+    }
+
+    bool fetchFormat()
+    {
+      m_imageFormat.m_width      = m_v4l2Format.fmt.pix.width;
+      m_imageFormat.m_height     = m_v4l2Format.fmt.pix.height;
+      m_imageFormat.m_format     = FormatID(m_v4l2Format.fmt.pix.pixelformat);
+      m_imageFormat.m_lineLength = m_v4l2Format.fmt.pix.bytesperline;
+      m_imageFormat.m_size       = m_v4l2Format.fmt.pix.sizeimage;
+
+      return true;
+    }
+
+    bool reportEmulatedFormats() const
     {
       for (size_t fmtIdx = 0; ; ++fmtIdx)
       {
@@ -136,7 +164,7 @@ class V4L2::Handle
         fmtDesc.type = m_v4l2Format.type;
 
         int err;
-        if (!m_fd.ioctl(VIDIOC_ENUM_FMT, &fmtDesc, false, &err))
+        if (!m_v4l2->fd_ioctl(VIDIOC_ENUM_FMT, &fmtDesc, false, &err))
         {
           if (err != EINVAL)
           {
@@ -157,39 +185,53 @@ class V4L2::Handle
       return true;
     }
 
-    bool setFormat(const ImageFormat& _imageFormat)
+
+    FormatHandler(const FormatHandler&) = delete;
+    FormatHandler& operator=(const FormatHandler&) = delete;
+};
+
+
+
+
+class V4L2::BufferMapperWrapper
+{
+  public:
+    explicit BufferMapperWrapper()
+     :m_v4l2(),
+      m_opened(false),
+      m_bufferMapper()
     {
-      static const v4l2_format s_zeroFormat = v4l2_format();
-      m_v4l2Format = s_zeroFormat;
-
-      m_v4l2Format.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-      m_v4l2Format.fmt.pix.width       = _imageFormat.m_width;
-      m_v4l2Format.fmt.pix.height      = _imageFormat.m_height;
-      m_v4l2Format.fmt.pix.pixelformat = _imageFormat.m_format.id();
-#warning TODO setup field
-#if 0
-      m_v4l2Format.fmt.pix.field       = V4L2_FIELD_NONE;
-#endif
-
-      if (!m_fd.ioctl(VIDIOC_S_FMT, &m_v4l2Format))
-        return false;
-
-#warning TEMPORARY
-#if 1
-      qDebug() << "V4L2 pix field" << m_v4l2Format.fmt.pix.field;
-#endif
-
-      m_imageFormat.m_width      = m_v4l2Format.fmt.pix.width;
-      m_imageFormat.m_height     = m_v4l2Format.fmt.pix.height;
-      m_imageFormat.m_format     = FormatID(m_v4l2Format.fmt.pix.pixelformat);
-      m_imageFormat.m_lineLength = m_v4l2Format.fmt.pix.bytesperline;
-      m_imageFormat.m_size       = m_v4l2Format.fmt.pix.sizeimage;
-
-      return reportEmulatedFormats();
     }
 
-    Handle(const Handle&) = delete;
-    Handle& operator=(const Handle&) = delete;
+    explicit BufferMapperWrapper(V4L2* _v4l2, const QSharedPointer<V4L2BufferMapper>& _bufferMapper)
+     :m_v4l2(_v4l2),
+      m_opened(false),
+      m_bufferMapper(_bufferMapper)
+    {
+      if (!m_v4l2 || !m_bufferMapper)
+        return;
+
+      if (!m_bufferMapper->map(m_v4l2))
+        return;
+
+      m_opened = true;
+    }
+
+    ~BufferMapperWrapper()
+    {
+      if (m_v4l2 && m_bufferMapper && m_opened)
+        m_bufferMapper->unmap(m_v4l2);
+    }
+
+    bool opened() const
+    {
+      return m_opened;
+    }
+
+  private:
+    V4L2* m_v4l2;
+    bool  m_opened;
+    QSharedPointer<V4L2BufferMapper> m_bufferMapper;
 };
 
 
@@ -197,10 +239,13 @@ class V4L2::Handle
 
 V4L2::V4L2(QObject* _parent)
  :QObject(_parent),
-  m_handle(),
+  m_fdHandle(),
+  m_formatHandler(),
   m_path("/dev/video0"),
   m_formatConfigured(),
-  m_formatActual()
+  m_formatActual(),
+  m_bufferMapperConfigured(),
+  m_bufferMapperActual()
 {
 }
 
@@ -220,20 +265,32 @@ V4L2::setFormat(const ImageFormat& _format)
   m_formatConfigured = _format;
 }
 
+void
+V4L2::setBufferMapper(const QSharedPointer<V4L2BufferMapper>& _bufferMapper)
+{
+  m_bufferMapperConfigured = _bufferMapper;
+}
+
 bool
 V4L2::open()
 {
-  if (m_handle)
-  {
-    qWarning() << "V4L2 already opened";
+  if (m_fdHandle)
     return true;
-  }
 
-  m_handle.reset(new Handle(m_path, m_formatConfigured));
-  if (!m_handle->opened())
+  m_fdHandle.reset(new FdHandle(m_path));
+  if (!m_fdHandle->opened())
   {
     qWarning() << "V4L2 open failed";
-    m_handle.reset();
+    m_fdHandle.reset();
+    return false;
+  }
+
+  m_formatHandler.reset(new FormatHandler(this, m_formatConfigured));
+  if (!m_formatHandler->opened())
+  {
+    qWarning() << "V4L2 format setup failed";
+    m_formatHandler.reset();
+    m_fdHandle.reset();
     return false;
   }
 
@@ -245,9 +302,55 @@ V4L2::open()
 bool
 V4L2::close()
 {
-  m_handle.reset();
+  stop(); // just in case
+
+  if (!m_fdHandle)
+    return true;
+
+  m_formatHandler.reset();
+  m_fdHandle.reset();
 
   emit closed();
+
+  return true;
+}
+
+bool
+V4L2::start()
+{
+  open(); // just in case
+
+  if (!m_fdHandle)
+  {
+    qWarning() << "V4L2 not opened";
+    return false;
+  }
+
+  if (m_bufferMapperActual)
+    return true;
+
+  m_bufferMapperActual.reset(new BufferMapperWrapper(this, m_bufferMapperConfigured));
+  if (!m_bufferMapperActual->opened())
+  {
+    qWarning() << "V4L2 buffers map failed";
+    m_bufferMapperActual.reset();
+    return false;
+  }
+
+  emit started();
+
+  return true;
+}
+
+bool
+V4L2::stop()
+{
+  if (!m_bufferMapperActual)
+    return true;
+
+  m_bufferMapperActual.reset();
+
+  emit stopped();
 
   return true;
 }
@@ -256,6 +359,21 @@ void
 V4L2::reportFPS()
 {
 #warning TODO
+}
+
+bool
+V4L2::fd_ioctl(int _request, void* _argp, bool _reportError, int* _errno)
+{
+  if (!m_fdHandle)
+  {
+    if (_errno)
+      *_errno = ENOTCONN;
+    if (_reportError)
+      qWarning() << "v4l2_ioctl(" << _request << ") attempt on closed device";
+    return false;
+  }
+
+  return m_fdHandle->ioctl(_request, _argp, _reportError, _errno);
 }
 
 } // namespace trik
