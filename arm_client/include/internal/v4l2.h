@@ -6,6 +6,7 @@
 #include <QString>
 #include <QScopedPointer>
 #include <QSharedPointer>
+#include <QSocketNotifier>
 #include <inttypes.h>
 
 #include "internal/image.h"
@@ -24,6 +25,14 @@ class V4L2BufferMapper
 
     virtual bool map(V4L2* _v4l2) = 0;
     virtual bool unmap(V4L2* _v4l2) = 0;
+
+  protected:
+    static int v4l2_fd(V4L2* _v4l2);
+    static bool v4l2_ioctl(V4L2* _v4l2, int _request, void* _argp, bool _reportError = true, int* _errno = NULL);
+
+  private:
+    V4L2BufferMapper(const V4L2BufferMapper&) = delete;
+    V4L2BufferMapper& operator=(const V4L2BufferMapper&) = delete;
 };
 inline V4L2BufferMapper::~V4L2BufferMapper() = default; // old gcc workaround
 
@@ -57,7 +66,11 @@ class V4L2 : public QObject
     void reportFPS();
 
   protected:
+    int fd() const;
     bool fd_ioctl(int _request, void* _argp, bool _reportError = true, int* _errno = NULL);
+
+  protected slots:
+    void frameReady();
 
   private:
     class FdHandle;
@@ -79,6 +92,8 @@ class V4L2 : public QObject
     class BufferMapperWrapper;
     friend class BufferMapperWrapper;
     QScopedPointer<BufferMapperWrapper> m_bufferMapperActual;
+
+    QScopedPointer<QSocketNotifier> m_frameNotifier;
 };
 
 } // namespace trik

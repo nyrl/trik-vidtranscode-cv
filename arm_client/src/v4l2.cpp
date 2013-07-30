@@ -2,6 +2,7 @@
 
 #include <QDebug>
 #include <QByteArray>
+#include <QVector>
 
 #include <errno.h>
 #include <fcntl.h>
@@ -9,6 +10,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/ioctl.h>
+#include <sys/mman.h>
 
 #include <linux/videodev2.h>
 #include <libv4l2.h>
@@ -17,6 +19,112 @@
 
 namespace trik
 {
+
+namespace // <unnamed>
+{
+
+class V4L2BufferMapperMemoryMmap : public V4L2BufferMapper
+{
+  public:
+    explicit V4L2BufferMapperMemoryMmap(size_t _count) :m_requestedCount(_count), m_buffers() {}
+
+    virtual bool map(V4L2* _v4l2)
+    {
+      v4l2_requestbuffers requestBuffers = v4l2_requestbuffers();
+      requestBuffers.count = m_requestedCount;
+      requestBuffers.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+      requestBuffers.memory = V4L2_MEMORY_MMAP;
+
+      if (!v4l2_ioctl(_v4l2, VIDIOC_REQBUFS, &requestBuffers))
+        return false;
+
+      m_buffers.resize(requestBuffers.count);
+      for (ssize_t idx = 0; idx < m_buffers.size(); ++idx)
+      {
+        v4l2_buffer buffer = v4l2_buffer();
+        buffer.index = idx;
+        buffer.type = requestBuffers.type;
+        buffer.memory = requestBuffers.memory;
+
+        if (!v4l2_ioctl(_v4l2, VIDIOC_QUERYBUF, &buffer))
+        {
+          m_buffers.clear();
+          qWarning() << "V4L2 query buffer failed";
+          return false;
+        }
+
+        m_buffers[idx] = QSharedPointer<MmapEntry>(new MmapEntry(v4l2_fd(_v4l2), buffer.length, buffer.m.offset));
+      }
+
+      return true;
+    }
+
+    virtual bool unmap(V4L2* _v4l2)
+    {
+      m_buffers.clear();
+      return true;
+    }
+
+  private:
+    class MmapEntry
+    {
+      public:
+        explicit MmapEntry(int _fd, size_t _size, off_t _offset)
+         :m_ptr(MAP_FAILED),
+          m_size(_size)
+        {
+          m_ptr = v4l2_mmap(NULL, m_size, PROT_READ|PROT_WRITE, MAP_SHARED, _fd, _offset);
+          if (m_ptr == MAP_FAILED)
+          {
+            qWarning() << "v4l2_mmap failed:" << errno;
+            m_size = 0;
+            return;
+          }
+        }
+
+        ~MmapEntry()
+        {
+          if (m_ptr != MAP_FAILED)
+            v4l2_munmap(m_ptr, m_size);
+        }
+
+        void* ptr() const
+        {
+          return m_ptr;
+        }
+
+        size_t size() const
+        {
+          return m_size;
+        }
+
+      private:
+        void*  m_ptr;
+        size_t m_size;
+    };
+
+    size_t m_requestedCount;
+    QVector<QSharedPointer<MmapEntry> > m_buffers;
+};
+
+} // namespace <unnamed>
+
+
+
+
+int
+V4L2BufferMapper::v4l2_fd(V4L2* _v4l2)
+{
+  return _v4l2->fd();
+}
+
+bool
+V4L2BufferMapper::v4l2_ioctl(V4L2* _v4l2, int _request, void* _argp, bool _reportError, int* _errno)
+{
+  return _v4l2->fd_ioctl(_request, _argp, _reportError, _errno);
+}
+
+
 
 
 class V4L2::FdHandle
@@ -47,6 +155,11 @@ class V4L2::FdHandle
     bool opened() const
     {
       return m_opened;
+    }
+
+    int fd() const
+    {
+      return m_fd;
     }
 
     bool ioctl(int _request, void* _argp, bool _reportError, int* _errno)
@@ -238,8 +351,9 @@ V4L2::V4L2(QObject* _parent)
   m_path("/dev/video0"),
   m_formatConfigured(),
   m_formatActual(),
-  m_bufferMapperConfigured(),
-  m_bufferMapperActual()
+  m_bufferMapperConfigured(new V4L2BufferMapperMemoryMmap(2)),
+  m_bufferMapperActual(),
+  m_frameNotifier()
 {
 }
 
@@ -288,6 +402,7 @@ V4L2::open()
     return false;
   }
 
+  emit formatChanged(m_formatHandler->imageFormat());
   emit opened();
 
   return true;
@@ -331,6 +446,9 @@ V4L2::start()
     return false;
   }
 
+  m_frameNotifier.reset(new QSocketNotifier(m_fdHandle->fd(), QSocketNotifier::Read, this));
+  connect(m_frameNotifier.data(), SIGNAL(activated(int)), this, SLOT(frameReady()));
+
   emit started();
 
   return true;
@@ -342,6 +460,7 @@ V4L2::stop()
   if (!m_bufferMapperActual)
     return true;
 
+  m_frameNotifier.reset();
   m_bufferMapperActual.reset();
 
   emit stopped();
@@ -353,6 +472,22 @@ void
 V4L2::reportFPS()
 {
 #warning TODO
+}
+
+void
+V4L2::frameReady()
+{
+#warning TODO
+  qDebug() << __func__;
+}
+
+int
+V4L2::fd() const
+{
+  if (!m_fdHandle)
+    return -1;
+
+  return m_fdHandle->fd();
 }
 
 bool
