@@ -8,6 +8,7 @@
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/ioctl.h>
 
 #include <linux/videodev2.h>
 #include <libv4l2.h>
@@ -124,22 +125,15 @@ class V4L2::FormatHandler
 
     bool setFormat(const ImageFormat& _imageFormat)
     {
+      m_v4l2Format = v4l2_format();
       m_v4l2Format.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
       m_v4l2Format.fmt.pix.width       = _imageFormat.m_width;
       m_v4l2Format.fmt.pix.height      = _imageFormat.m_height;
-      m_v4l2Format.fmt.pix.pixelformat = _imageFormat.m_format.id();
-#warning TODO setup field
-#if 0
+      m_v4l2Format.fmt.pix.pixelformat = _imageFormat.m_format ? _imageFormat.m_format.id() : V4L2_PIX_FMT_YUYV;
       m_v4l2Format.fmt.pix.field       = V4L2_FIELD_NONE;
-#endif
 
       if (!m_v4l2->fd_ioctl(VIDIOC_S_FMT, &m_v4l2Format))
         return false;
-
-#warning TEMPORARY
-#if 1
-      qDebug() << "V4L2 pix field" << m_v4l2Format.fmt.pix.field;
-#endif
 
       return true;
     }

@@ -17,6 +17,8 @@ class FormatID
     FormatID() : m_fmt() {}
     explicit FormatID(uint32_t _fmt) : m_fmt(_fmt) {}
 
+    operator bool() const { return m_fmt != 0; }
+
     uint32_t id() const { return m_fmt; }
 
     QString toString() const
