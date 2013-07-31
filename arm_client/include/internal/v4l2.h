@@ -4,9 +4,9 @@
 #include <QtGlobal>
 #include <QObject>
 #include <QString>
+#include <QPointer>
 #include <QScopedPointer>
 #include <QSharedPointer>
-#include <QSocketNotifier>
 #include <inttypes.h>
 
 #include "internal/image.h"
@@ -17,24 +17,54 @@ namespace trik
 
 class V4L2;
 
+
 class V4L2BufferMapper
 {
   public:
     V4L2BufferMapper() = default;
     virtual ~V4L2BufferMapper();
 
-    virtual bool map(V4L2* _v4l2) = 0;
-    virtual bool unmap(V4L2* _v4l2) = 0;
+    virtual size_t buffersCount() const = 0;
+
+    virtual bool map(const QPointer<V4L2>& _v4l2) = 0;
+    virtual bool unmap(const QPointer<V4L2>& _v4l2) = 0;
+
+    virtual bool queue(const QPointer<V4L2>& _v4l2, size_t _index) = 0;
+    virtual bool dequeue(const QPointer<V4L2>& _v4l2, size_t _index) = 0;
 
   protected:
-    static int v4l2_fd(V4L2* _v4l2);
-    static bool v4l2_ioctl(V4L2* _v4l2, int _request, void* _argp, bool _reportError = true, int* _errno = NULL);
+    static int v4l2_fd(const QPointer<V4L2>& _v4l2);
+    static bool v4l2_ioctl(const QPointer<V4L2>& _v4l2, int _request, void* _argp, bool _reportError = true, int* _errno = NULL);
 
   private:
     V4L2BufferMapper(const V4L2BufferMapper&) = delete;
     V4L2BufferMapper& operator=(const V4L2BufferMapper&) = delete;
 };
-inline V4L2BufferMapper::~V4L2BufferMapper() = default; // old gcc workaround
+inline V4L2BufferMapper::~V4L2BufferMapper() = default; // gcc workaround
+
+
+class V4L2BufferMapperMemoryMmap : public V4L2BufferMapper
+{
+  public:
+    V4L2BufferMapperMemoryMmap(size_t _desiredBuffersCount);
+    virtual ~V4L2BufferMapperMemoryMmap();
+
+    virtual size_t buffersCount() const;
+
+    virtual bool map(const QPointer<V4L2>& _v4l2);
+    virtual bool unmap(const QPointer<V4L2>& _v4l2);
+
+    virtual bool queue(const QPointer<V4L2>& _v4l2, size_t _index);
+    virtual bool dequeue(const QPointer<V4L2>& _v4l2, size_t _index);
+
+  private:
+    size_t m_desiredBuffersCount;
+
+    class Storage;
+    QScopedPointer<Storage> m_storage;
+};
+
+
 
 
 class V4L2 : public QObject
@@ -45,17 +75,16 @@ class V4L2 : public QObject
     virtual ~V4L2();
 
   signals:
-    void opened();
+    void opened(const ImageFormat& _format);
     void closed();
     void started();
     void stopped();
-    void formatChanged(const ImageFormat& _format);
+    void fpsReported(qreal _fps);
 
   public slots:
     void setDevicePath(const QString& _path);
     void setFormat(const ImageFormat& _format);
     void setBufferMapper(const QSharedPointer<V4L2BufferMapper>& _bufferMapper);
-
 
     bool open();
     bool close();
@@ -63,37 +92,32 @@ class V4L2 : public QObject
     bool start();
     bool stop();
 
-    void reportFPS();
-
   protected:
     int fd() const;
     bool fd_ioctl(int _request, void* _argp, bool _reportError = true, int* _errno = NULL);
 
   protected slots:
     void frameReady();
+    void reportFps();
 
   private:
-    class FdHandle;
-    friend class FdHandle;
-    QScopedPointer<FdHandle> m_fdHandle;
-
-    class FormatHandler;
-    friend class FormatHandler;
-    QScopedPointer<FormatHandler> m_formatHandler;
-
-    QString     m_path;
-
-    ImageFormat m_formatConfigured;
-    ImageFormat m_formatActual;
-
     friend class V4L2BufferMapper;
-    QSharedPointer<V4L2BufferMapper> m_bufferMapperConfigured;
 
-    class BufferMapperWrapper;
-    friend class BufferMapperWrapper;
-    QScopedPointer<BufferMapperWrapper> m_bufferMapperActual;
+    struct Config
+    {
+      QString                          m_path;
+      ImageFormat                      m_imageFormat;
+      QSharedPointer<V4L2BufferMapper> m_bufferMapper;
+    };
+    Config m_config;
 
-    QScopedPointer<QSocketNotifier> m_frameNotifier;
+    class OpenCloseHandler;
+    friend class OpenCloseHandler;
+    QScopedPointer<OpenCloseHandler> m_openCloseHandler;
+
+    class RunningHandler;
+    friend class RunningHandler;
+    QScopedPointer<RunningHandler> m_runningHandler;
 };
 
 } // namespace trik

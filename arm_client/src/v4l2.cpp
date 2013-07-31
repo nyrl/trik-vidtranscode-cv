@@ -2,7 +2,8 @@
 
 #include <QDebug>
 #include <QByteArray>
-#include <QVector>
+#include <QScopedArrayPointer>
+#include <QSocketNotifier>
 
 #include <errno.h>
 #include <fcntl.h>
@@ -16,76 +17,161 @@
 #include <libv4l2.h>
 
 
-
 namespace trik
 {
 
-namespace // <unnamed>
+namespace // unnamed
 {
 
-class V4L2BufferMapperMemoryMmap : public V4L2BufferMapper
+class FdHandle
 {
   public:
-    explicit V4L2BufferMapperMemoryMmap(size_t _count) :m_requestedCount(_count), m_buffers() {}
-
-    virtual bool map(V4L2* _v4l2)
+    explicit FdHandle(const QString& _path)
+     :m_fd(-1)
     {
-      v4l2_requestbuffers requestBuffers = v4l2_requestbuffers();
-      requestBuffers.count = m_requestedCount;
-      requestBuffers.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-      requestBuffers.memory = V4L2_MEMORY_MMAP;
+      const QByteArray& path(_path.toLocal8Bit()); // pin temporary, convert to char*
 
-      if (!v4l2_ioctl(_v4l2, VIDIOC_REQBUFS, &requestBuffers))
-        return false;
-
-      m_buffers.resize(requestBuffers.count);
-      for (ssize_t idx = 0; idx < m_buffers.size(); ++idx)
+      m_fd = ::v4l2_open(path.data(), O_RDWR|O_NONBLOCK, 0);
+      if (m_fd < 0)
       {
-        v4l2_buffer buffer = v4l2_buffer();
-        buffer.index = idx;
-        buffer.type = requestBuffers.type;
-        buffer.memory = requestBuffers.memory;
-
-        if (!v4l2_ioctl(_v4l2, VIDIOC_QUERYBUF, &buffer))
-        {
-          m_buffers.clear();
-          qWarning() << "V4L2 query buffer failed";
-          return false;
-        }
-
-        m_buffers[idx] = QSharedPointer<MmapEntry>(new MmapEntry(v4l2_fd(_v4l2), buffer.length, buffer.m.offset));
+        m_fd = -1;
+        qWarning() << "v4l2_open(" << _path << ") failed:" << errno;
+        return;
       }
+    }
+
+    ~FdHandle()
+    {
+      if (m_fd != -1)
+        ::v4l2_close(m_fd);
+    }
+
+    bool opened() const
+    {
+      return m_fd != -1;
+    }
+
+    int fd() const
+    {
+      return m_fd;
+    }
+
+    bool ioctl(int _request, void* _argp, bool _reportError, int* _errno)
+    {
+      if (!opened())
+      {
+        if (_errno)
+          *_errno = ENOTCONN;
+        if (_reportError)
+          qWarning() << "v4l2_ioctl(" << _request << ") attempt on closed device";
+        return false;
+      }
+
+      if (::v4l2_ioctl(m_fd, _request, _argp) == -1)
+      {
+        if (_errno)
+          *_errno = errno;
+        if (_reportError)
+          qWarning() << "v4l2_ioctl(" << _request << ") failed:" << errno;
+        return false;
+      }
+
+      if (_errno)
+        *_errno = 0;
 
       return true;
     }
 
-    virtual bool unmap(V4L2* _v4l2)
+  private:
+    int  m_fd;
+
+    FdHandle(const FdHandle&) = delete;
+    FdHandle& operator=(const FdHandle&) = delete;
+};
+
+} // namespace unnamed
+
+
+
+
+int
+V4L2BufferMapper::v4l2_fd(const QPointer<V4L2>& _v4l2)
+{
+  return _v4l2->fd();
+}
+
+bool
+V4L2BufferMapper::v4l2_ioctl(const QPointer<V4L2>& _v4l2, int _request, void* _argp, bool _reportError, int* _errno)
+{
+  return _v4l2->fd_ioctl(_request, _argp, _reportError, _errno);
+}
+
+
+
+
+class V4L2BufferMapperMemoryMmap::Storage
+{
+  public:
+    explicit Storage(size_t _buffersCount) : m_buffersCount(_buffersCount), m_buffers(new MmapEntry[_buffersCount])
     {
-      m_buffers.clear();
+      Q_CHECK_PTR(m_buffers);
+    }
+
+    ~Storage() = default;
+
+    size_t count() const
+    {
+      return m_buffersCount;
+    }
+
+    bool getMapping(size_t _index, void*& _ptr, size_t& _size) const
+    {
+      if (_index >= m_buffersCount)
+      {
+        _ptr = MAP_FAILED;
+        _size = 0;
+        return false;
+      }
+
+      _ptr = m_buffers[_index].ptr();
+      _size = m_buffers[_index].size();
       return true;
+    }
+
+    bool setMapping(size_t _index, int _fd, size_t _size, off_t _offset)
+    {
+      if (_index >= m_buffersCount)
+        return false;
+
+      return m_buffers[_index].map(_fd, _size, _offset);
     }
 
   private:
     class MmapEntry
     {
       public:
-        explicit MmapEntry(int _fd, size_t _size, off_t _offset)
+        explicit MmapEntry()
          :m_ptr(MAP_FAILED),
-          m_size(_size)
+          m_size(0)
         {
-          m_ptr = v4l2_mmap(NULL, m_size, PROT_READ|PROT_WRITE, MAP_SHARED, _fd, _offset);
-          if (m_ptr == MAP_FAILED)
-          {
-            qWarning() << "v4l2_mmap failed:" << errno;
-            m_size = 0;
-            return;
-          }
         }
 
         ~MmapEntry()
         {
           if (m_ptr != MAP_FAILED)
             v4l2_munmap(m_ptr, m_size);
+        }
+
+        bool map(int _fd, size_t _size, off_t _offset)
+        {
+          m_ptr = v4l2_mmap(NULL, _size, PROT_READ|PROT_WRITE, MAP_SHARED, _fd, _offset);
+          if (m_ptr == MAP_FAILED)
+          {
+            qWarning() << "v4l2_mmap failed:" << errno;
+            return false;
+          }
+          m_size = _size;
+          return true;
         }
 
         void* ptr() const
@@ -103,53 +189,142 @@ class V4L2BufferMapperMemoryMmap : public V4L2BufferMapper
         size_t m_size;
     };
 
-    size_t m_requestedCount;
-    QVector<QSharedPointer<MmapEntry> > m_buffers;
+    size_t m_buffersCount;
+    QScopedArrayPointer<MmapEntry> m_buffers;
 };
 
-} // namespace <unnamed>
+
+
+
+V4L2BufferMapperMemoryMmap::V4L2BufferMapperMemoryMmap(size_t _desiredBuffersCount)
+ :V4L2BufferMapper(),
+  m_desiredBuffersCount(_desiredBuffersCount),
+  m_storage()
+{
+}
+
+V4L2BufferMapperMemoryMmap::~V4L2BufferMapperMemoryMmap() = default;
+
+size_t
+V4L2BufferMapperMemoryMmap::buffersCount() const
+{
+  return m_storage ? m_storage->count() : 0;
+}
+
+bool
+V4L2BufferMapperMemoryMmap::map(const QPointer<V4L2>& _v4l2)
+{
+  Q_CHECK_PTR(_v4l2);
+
+  v4l2_requestbuffers requestBuffers = v4l2_requestbuffers();
+  requestBuffers.count = m_desiredBuffersCount;
+  requestBuffers.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+  requestBuffers.memory = V4L2_MEMORY_MMAP;
+
+  if (!v4l2_ioctl(_v4l2, VIDIOC_REQBUFS, &requestBuffers))
+    return false;
+
+  m_storage.reset();
+  QScopedPointer<Storage> storage(new Storage(requestBuffers.count));
+  for (size_t idx = 0; idx < storage->count(); ++idx)
+  {
+    v4l2_buffer buffer = v4l2_buffer();
+    buffer.index = idx;
+    buffer.type = requestBuffers.type;
+    buffer.memory = requestBuffers.memory;
+
+    if (!v4l2_ioctl(_v4l2, VIDIOC_QUERYBUF, &buffer))
+    {
+      qWarning() << "V4L2 query buffer failed";
+      return false;
+    }
+
+    storage->setMapping(idx, v4l2_fd(_v4l2), buffer.length, buffer.m.offset);
+  }
+
+  m_storage.swap(storage);
+
+  return true;
+}
+
+bool
+V4L2BufferMapperMemoryMmap::unmap(const QPointer<V4L2>& _v4l2)
+{
+  Q_CHECK_PTR(_v4l2);
+
+  m_storage.reset();
+
+  return true;
+}
+
+bool
+V4L2BufferMapperMemoryMmap::queue(const QPointer<V4L2>& _v4l2, size_t _index)
+{
+  Q_CHECK_PTR(_v4l2);
+
+  if (_index >= buffersCount())
+    return false;
+
+  v4l2_buffer buffer = v4l2_buffer();
+  buffer.index  = _index;
+  buffer.type   = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+  buffer.memory = V4L2_MEMORY_MMAP;
+
+  if (!v4l2_ioctl(_v4l2, VIDIOC_QBUF, &buffer))
+  {
+    qWarning() << "V4L2 queue buffer" << _index << "failed";
+    return false;
+  }
+
+  return true;
+}
+
+bool
+V4L2BufferMapperMemoryMmap::dequeue(const QPointer<V4L2>& _v4l2, size_t _index)
+{
+  Q_CHECK_PTR(_v4l2);
+
+#warning TODO + api change
+  return true;
+}
 
 
 
 
-class V4L2::FdHandle
+class V4L2::OpenCloseHandler
 {
   public:
-    explicit FdHandle(const QString& _path)
-     :m_fd(-1),
-      m_opened(false)
-    {
-      QByteArray path(_path.toLocal8Bit()); // pin temporary, convert to char*
+    explicit OpenCloseHandler(const QPointer<V4L2>& _v4l2) :m_v4l2(_v4l2) {}
+    ~OpenCloseHandler() { close(); }
 
-      m_fd = v4l2_open(path.data(), O_RDWR|O_NONBLOCK, 0);
-      if (m_fd < 0)
+    bool open(const V4L2::Config& _config)
+    {
+      m_fd.reset(new FdHandle(_config.m_path));
+      if (!m_fd->opened())
       {
-        qWarning() << "v4l2_open(" << _path << ") failed:" << errno;
-        return;
+        m_fd.reset();
+        return false;
       }
 
-      m_opened = true;
+      if (!setFormat(_config.m_imageFormat))
+        return false;
+
+      return true;
     }
 
-    ~FdHandle()
+    void close()
     {
-      if (m_fd)
-        v4l2_close(m_fd);
-    }
-
-    bool opened() const
-    {
-      return m_opened;
+      m_fd.reset();
     }
 
     int fd() const
     {
-      return m_fd;
+      return m_fd ? m_fd->fd() : -1;
     }
 
     bool ioctl(int _request, void* _argp, bool _reportError, int* _errno)
     {
-      if (!m_opened)
+      if (!m_fd)
       {
         if (_errno)
           *_errno = ENOTCONN;
@@ -157,57 +332,7 @@ class V4L2::FdHandle
           qWarning() << "v4l2_ioctl(" << _request << ") attempt on closed device";
         return false;
       }
-
-      if (v4l2_ioctl(m_fd, _request, _argp) == -1)
-      {
-        if (_errno)
-          *_errno = errno;
-        if (_reportError)
-          qWarning() << "v4l2_ioctl(" << _request << ") failed:" << errno;
-        return false;
-      }
-
-      if (_errno)
-        *_errno = 0;
-
-      return true;
-    }
-
-  private:
-    int  m_fd;
-    bool m_opened;
-
-    FdHandle(const FdHandle&) = delete;
-    FdHandle& operator=(const FdHandle&) = delete;
-};
-
-
-
-
-class V4L2::FormatHandler
-{
-  public:
-    explicit FormatHandler(V4L2* _v4l2, const ImageFormat& _imageFormat)
-     :m_v4l2(_v4l2),
-      m_opened(false),
-      m_v4l2Format(),
-      m_imageFormat()
-    {
-      if (!setFormat(_imageFormat))
-        return;
-
-      if (!reportEmulatedFormats())
-        return;
-
-      if (!fetchFormat())
-        return;
-
-      m_opened = true;
-    }
-
-    bool opened() const
-    {
-      return m_opened;
+      return m_fd->ioctl(_request, _argp, _reportError, _errno);
     }
 
     const ImageFormat& imageFormat() const
@@ -216,145 +341,176 @@ class V4L2::FormatHandler
     }
 
   private:
-    V4L2*        m_v4l2;
-    bool         m_opened;
-    v4l2_format  m_v4l2Format;
+    QPointer<V4L2> m_v4l2;
+    QScopedPointer<FdHandle> m_fd;
     ImageFormat  m_imageFormat;
 
-    bool setFormat(const ImageFormat& _imageFormat)
-    {
-      m_v4l2Format = v4l2_format();
-      m_v4l2Format.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-      m_v4l2Format.fmt.pix.width       = _imageFormat.m_width;
-      m_v4l2Format.fmt.pix.height      = _imageFormat.m_height;
-      m_v4l2Format.fmt.pix.pixelformat = _imageFormat.m_format ? _imageFormat.m_format.id() : V4L2_PIX_FMT_YUYV;
-      m_v4l2Format.fmt.pix.field       = V4L2_FIELD_NONE;
 
-      if (!m_v4l2->fd_ioctl(VIDIOC_S_FMT, &m_v4l2Format))
-        return false;
-
-      return true;
-    }
-
-    bool fetchFormat()
-    {
-      m_imageFormat.m_width      = m_v4l2Format.fmt.pix.width;
-      m_imageFormat.m_height     = m_v4l2Format.fmt.pix.height;
-      m_imageFormat.m_format     = FormatID(m_v4l2Format.fmt.pix.pixelformat);
-      m_imageFormat.m_lineLength = m_v4l2Format.fmt.pix.bytesperline;
-      m_imageFormat.m_size       = m_v4l2Format.fmt.pix.sizeimage;
-
-      return true;
-    }
-
-    bool reportEmulatedFormats() const
+    void reportEmulatedFormats() const
     {
       for (size_t fmtIdx = 0; ; ++fmtIdx)
       {
         v4l2_fmtdesc fmtDesc;
         fmtDesc.index = fmtIdx;
-        fmtDesc.type = m_v4l2Format.type;
+        fmtDesc.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
 
         int err;
-        if (!m_v4l2->fd_ioctl(VIDIOC_ENUM_FMT, &fmtDesc, false, &err))
+        if (!m_fd->ioctl(VIDIOC_ENUM_FMT, &fmtDesc, false, &err))
         {
           if (err != EINVAL)
-          {
             qWarning() << "v4l2_ioctl(VIDIOC_ENUM_FMT) failed:" << err;
-            return false;
-          }
-          break;
+          return;
         }
 
-        if (fmtDesc.pixelformat == m_v4l2Format.fmt.pix.pixelformat)
+        if (fmtDesc.pixelformat == m_imageFormat.m_format.id())
         {
           if (fmtDesc.flags & V4L2_FMT_FLAG_EMULATED)
-            qWarning() << "V4L2 format" << FormatID(m_v4l2Format.fmt.pix.pixelformat).toString() << "is emulated, performance will be degraded";
-
-          break;
+            qWarning() << "V4L2 format" << m_imageFormat.m_format.toString() << "is emulated, performance will be degraded";
+          return;
         }
       }
+    }
+
+    bool setFormat(const ImageFormat& _imageFormat)
+    {
+      v4l2_format format = v4l2_format();
+      format.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+      format.fmt.pix.width       = _imageFormat.m_width;
+      format.fmt.pix.height      = _imageFormat.m_height;
+      format.fmt.pix.pixelformat = _imageFormat.m_format.id();
+      format.fmt.pix.field       = V4L2_FIELD_NONE;
+
+      if (!m_fd->ioctl(VIDIOC_S_FMT, &format, true, NULL))
+        return false;
+
+      m_imageFormat.m_width      = format.fmt.pix.width;
+      m_imageFormat.m_height     = format.fmt.pix.height;
+      m_imageFormat.m_format     = FormatID(format.fmt.pix.pixelformat);
+      m_imageFormat.m_lineLength = format.fmt.pix.bytesperline;
+      m_imageFormat.m_size       = format.fmt.pix.sizeimage;
+
+      reportEmulatedFormats();
+
       return true;
     }
 
 
-    FormatHandler(const FormatHandler&) = delete;
-    FormatHandler& operator=(const FormatHandler&) = delete;
+    OpenCloseHandler(const OpenCloseHandler&) = delete;
+    OpenCloseHandler& operator=(const OpenCloseHandler&) = delete;
 };
 
 
 
 
-int
-V4L2BufferMapper::v4l2_fd(V4L2* _v4l2)
-{
-  return _v4l2->fd();
-}
-
-bool
-V4L2BufferMapper::v4l2_ioctl(V4L2* _v4l2, int _request, void* _argp, bool _reportError, int* _errno)
-{
-  return _v4l2->fd_ioctl(_request, _argp, _reportError, _errno);
-}
-
-
-
-
-class V4L2::BufferMapperWrapper
+class V4L2::RunningHandler
 {
   public:
-    explicit BufferMapperWrapper()
-     :m_v4l2(),
-      m_opened(false),
-      m_bufferMapper()
+    explicit RunningHandler(const QPointer<V4L2>& _v4l2) :m_v4l2(_v4l2) {}
+    ~RunningHandler() { close(); }
+
+    bool open(const V4L2::Config& _config)
     {
+      m_bufferMapper = _config.m_bufferMapper;
+      if (m_bufferMapper)
+      {
+        if (!m_bufferMapper->map(m_v4l2))
+        {
+          m_bufferMapper.clear();
+          qWarning() << "V4L2 map failed";
+          return false;
+        }
+#warning TODO queue all buffers
+      }
+
+      m_frameReadyNotifier.reset(new QSocketNotifier(m_v4l2->fd(), QSocketNotifier::Read, m_v4l2));
+      connect(m_frameReadyNotifier.data(), SIGNAL(activated(int)), m_v4l2, SLOT(frameReady()));
+
+      if (!startCapture())
+      {
+        qWarning() << "V4L2 queue buffers failed";
+        return false;
+      }
+
+#warning TODO timer for FPS reporting
+
+      return true;
     }
 
-    explicit BufferMapperWrapper(V4L2* _v4l2, const QSharedPointer<V4L2BufferMapper>& _bufferMapper)
-     :m_v4l2(_v4l2),
-      m_opened(false),
-      m_bufferMapper(_bufferMapper)
+    void close()
     {
-      if (!m_v4l2 || !m_bufferMapper)
-        return;
+#warning TODO
 
-      if (!m_bufferMapper->map(m_v4l2))
-        return;
-
-      m_opened = true;
-    }
-
-    ~BufferMapperWrapper()
-    {
-      if (m_v4l2 && m_bufferMapper && m_opened)
+      stopCapture();
+      m_frameReadyNotifier.reset();
+      if (m_bufferMapper)
+      {
+        // do not de-queue buffers
         m_bufferMapper->unmap(m_v4l2);
+      }
+      m_bufferMapper.clear();
     }
 
-    bool opened() const
+    void frameReady()
     {
-      return m_opened;
+#warning TODO
+      qDebug() << __func__;
+    }
+
+    void reportFps()
+    {
+#warning TODO
+      qDebug() << __func__;
     }
 
   private:
-    V4L2* m_v4l2;
-    bool  m_opened;
+    QPointer<V4L2> m_v4l2;
     QSharedPointer<V4L2BufferMapper> m_bufferMapper;
+    QScopedPointer<QSocketNotifier> m_frameReadyNotifier;
+
+    bool startCapture()
+    {
+      v4l2_buf_type capture = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+      if (!m_v4l2->fd_ioctl(VIDIOC_STREAMON, &capture))
+      {
+        qWarning() << "V4L2 stream on failed";
+        return false;
+      }
+
+      return true;
+    }
+
+    bool stopCapture()
+    {
+      v4l2_buf_type capture = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+      if (!m_v4l2->fd_ioctl(VIDIOC_STREAMOFF, &capture))
+      {
+        qWarning() << "V4L2 stream off failed";
+        return false;
+      }
+
+      return true;
+    }
+
+    RunningHandler(const RunningHandler&) = delete;
+    RunningHandler& operator=(const RunningHandler&) = delete;
 };
+
+
+
+
 
 
 
 
 V4L2::V4L2(QObject* _parent)
  :QObject(_parent),
-  m_fdHandle(),
-  m_formatHandler(),
-  m_path("/dev/video0"),
-  m_formatConfigured(),
-  m_formatActual(),
-  m_bufferMapperConfigured(new V4L2BufferMapperMemoryMmap(2)),
-  m_bufferMapperActual(),
-  m_frameNotifier()
+  m_config(),
+  m_openCloseHandler(),
+  m_runningHandler()
 {
+  m_config.m_path = "/dev/video0";
+  m_config.m_imageFormat.m_format = FormatID(V4L2_PIX_FMT_YUYV);
+  m_config.m_bufferMapper = QSharedPointer<V4L2BufferMapper>(new V4L2BufferMapperMemoryMmap(2));
 }
 
 V4L2::~V4L2()
@@ -364,46 +520,36 @@ V4L2::~V4L2()
 void
 V4L2::setDevicePath(const QString& _path)
 {
-  m_path = _path;
+  m_config.m_path = _path;
 }
 
 void
 V4L2::setFormat(const ImageFormat& _format)
 {
-  m_formatConfigured = _format;
+  m_config.m_imageFormat = _format;
 }
 
 void
 V4L2::setBufferMapper(const QSharedPointer<V4L2BufferMapper>& _bufferMapper)
 {
-  m_bufferMapperConfigured = _bufferMapper;
+  m_config.m_bufferMapper = _bufferMapper;
 }
 
 bool
 V4L2::open()
 {
-  if (m_fdHandle)
+  if (m_openCloseHandler)
     return true;
 
-  m_fdHandle.reset(new FdHandle(m_path));
-  if (!m_fdHandle->opened())
+  m_openCloseHandler.reset(new OpenCloseHandler(this));
+  if (!m_openCloseHandler->open(m_config))
   {
+    m_openCloseHandler.reset();
     qWarning() << "V4L2 open failed";
-    m_fdHandle.reset();
     return false;
   }
 
-  m_formatHandler.reset(new FormatHandler(this, m_formatConfigured));
-  if (!m_formatHandler->opened())
-  {
-    qWarning() << "V4L2 format setup failed";
-    m_formatHandler.reset();
-    m_fdHandle.reset();
-    return false;
-  }
-
-  emit formatChanged(m_formatHandler->imageFormat());
-  emit opened();
+  emit opened(m_openCloseHandler->imageFormat());
 
   return true;
 }
@@ -411,13 +557,14 @@ V4L2::open()
 bool
 V4L2::close()
 {
-  stop(); // just in case
+  if (m_runningHandler) // just in case
+    stop();
 
-  if (!m_fdHandle)
+  if (!m_openCloseHandler)
     return true;
 
-  m_formatHandler.reset();
-  m_fdHandle.reset();
+  m_openCloseHandler->close();
+  m_openCloseHandler.reset();
 
   emit closed();
 
@@ -427,27 +574,19 @@ V4L2::close()
 bool
 V4L2::start()
 {
-  open(); // just in case
-
-  if (!m_fdHandle)
+  if (!m_openCloseHandler)
   {
-    qWarning() << "V4L2 not opened";
-    return false;
+    if (!open() || !m_openCloseHandler)
+      return false;
   }
 
-  if (m_bufferMapperActual)
-    return true;
-
-  m_bufferMapperActual.reset(new BufferMapperWrapper(this, m_bufferMapperConfigured));
-  if (!m_bufferMapperActual->opened())
+  m_runningHandler.reset(new RunningHandler(this));
+  if (!m_runningHandler->open(m_config))
   {
-    qWarning() << "V4L2 buffers map failed";
-    m_bufferMapperActual.reset();
+    m_runningHandler.reset();
+    qWarning() << "V4L2 start failed";
     return false;
   }
-
-  m_frameNotifier.reset(new QSocketNotifier(m_fdHandle->fd(), QSocketNotifier::Read, this));
-  connect(m_frameNotifier.data(), SIGNAL(activated(int)), this, SLOT(frameReady()));
 
   emit started();
 
@@ -457,11 +596,11 @@ V4L2::start()
 bool
 V4L2::stop()
 {
-  if (!m_bufferMapperActual)
+  if (!m_runningHandler)
     return true;
 
-  m_frameNotifier.reset();
-  m_bufferMapperActual.reset();
+  m_runningHandler->close();
+  m_runningHandler.reset();
 
   emit stopped();
 
@@ -469,31 +608,32 @@ V4L2::stop()
 }
 
 void
-V4L2::reportFPS()
+V4L2::frameReady()
 {
-#warning TODO
+  if (m_runningHandler)
+    m_runningHandler->frameReady();
 }
 
 void
-V4L2::frameReady()
+V4L2::reportFps()
 {
-#warning TODO
-  qDebug() << __func__;
+  if (m_runningHandler)
+    m_runningHandler->reportFps();
 }
 
 int
 V4L2::fd() const
 {
-  if (!m_fdHandle)
+  if (!m_openCloseHandler)
     return -1;
 
-  return m_fdHandle->fd();
+  return m_openCloseHandler->fd();
 }
 
 bool
 V4L2::fd_ioctl(int _request, void* _argp, bool _reportError, int* _errno)
 {
-  if (!m_fdHandle)
+  if (!m_openCloseHandler)
   {
     if (_errno)
       *_errno = ENOTCONN;
@@ -502,7 +642,9 @@ V4L2::fd_ioctl(int _request, void* _argp, bool _reportError, int* _errno)
     return false;
   }
 
-  return m_fdHandle->ioctl(_request, _argp, _reportError, _errno);
+  return m_openCloseHandler->ioctl(_request, _argp, _reportError, _errno);
 }
+
+
 
 } // namespace trik
