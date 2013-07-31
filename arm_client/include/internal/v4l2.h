@@ -16,31 +16,38 @@ namespace trik
 {
 
 class V4L2;
+class V4L2Frame;
 
 
 class V4L2BufferMapper
 {
   public:
-    V4L2BufferMapper() = default;
-    virtual ~V4L2BufferMapper();
+    V4L2BufferMapper() : m_v4l2() {}
+    virtual ~V4L2BufferMapper() { if (m_v4l2) detach(m_v4l2); }
 
     virtual size_t buffersCount() const = 0;
 
-    virtual bool map(const QPointer<V4L2>& _v4l2) = 0;
-    virtual bool unmap(const QPointer<V4L2>& _v4l2) = 0;
+    virtual void attach(const QPointer<V4L2>& _v4l2);
+    virtual void detach(const QPointer<V4L2>& _v4l2);
 
-    virtual bool queue(const QPointer<V4L2>& _v4l2, size_t _index) = 0;
-    virtual bool dequeue(const QPointer<V4L2>& _v4l2, size_t _index) = 0;
+    virtual bool map() = 0;
+    virtual bool unmap() = 0;
+
+    virtual bool queueAll() = 0;
+    virtual bool queue(size_t _index) = 0;
+    virtual bool dequeue(const QSharedPointer<V4L2BufferMapper>& _bufferMapper, QSharedPointer<V4L2Frame>& _capturedFrame) = 0;
 
   protected:
-    static int v4l2_fd(const QPointer<V4L2>& _v4l2);
-    static bool v4l2_ioctl(const QPointer<V4L2>& _v4l2, int _request, void* _argp, bool _reportError = true, int* _errno = NULL);
+    // friendly methods to access V4L2 protected methods by derived objects
+    int v4l2_fd();
+    bool v4l2_ioctl(int _request, void* _argp, bool _reportError = true, int* _errno = NULL);
 
   private:
+    QPointer<V4L2> m_v4l2;
+
     V4L2BufferMapper(const V4L2BufferMapper&) = delete;
     V4L2BufferMapper& operator=(const V4L2BufferMapper&) = delete;
 };
-inline V4L2BufferMapper::~V4L2BufferMapper() = default; // gcc workaround
 
 
 class V4L2BufferMapperMemoryMmap : public V4L2BufferMapper
@@ -51,17 +58,62 @@ class V4L2BufferMapperMemoryMmap : public V4L2BufferMapper
 
     virtual size_t buffersCount() const;
 
-    virtual bool map(const QPointer<V4L2>& _v4l2);
-    virtual bool unmap(const QPointer<V4L2>& _v4l2);
+    virtual bool map();
+    virtual bool unmap();
 
-    virtual bool queue(const QPointer<V4L2>& _v4l2, size_t _index);
-    virtual bool dequeue(const QPointer<V4L2>& _v4l2, size_t _index);
+    virtual bool queueAll();
+    virtual bool queue(size_t _index);
+    virtual bool dequeue(const QSharedPointer<V4L2BufferMapper>& _bufferMapper, QSharedPointer<V4L2Frame>& _capturedFrame);
 
   private:
     size_t m_desiredBuffersCount;
 
     class Storage;
     QScopedPointer<Storage> m_storage;
+};
+
+
+
+
+class V4L2Frame
+{
+  public:
+    V4L2Frame(const QSharedPointer<V4L2BufferMapper>& _bufferMapper, void* _ptr, size_t _size, size_t _index)
+     :m_bufferMapper(_bufferMapper),
+      m_ptr(_ptr),
+      m_size(_size),
+      m_index(_index)
+    {
+      Q_CHECK_PTR(m_bufferMapper);
+    }
+
+    ~V4L2Frame()
+    {
+      m_bufferMapper->queue(m_index);
+    }
+
+    void* ptr() const
+    {
+      return m_ptr;
+    }
+
+    size_t size() const
+    {
+      return m_size;
+    }
+
+    size_t index() const
+    {
+      return m_index;
+    }
+  private:
+    QSharedPointer<V4L2BufferMapper> m_bufferMapper;
+    void*          m_ptr;
+    size_t         m_size;
+    size_t         m_index;
+
+    V4L2Frame(const V4L2Frame&) = delete;
+    V4L2Frame& operator=(const V4L2Frame&) = delete;
 };
 
 
@@ -79,6 +131,7 @@ class V4L2 : public QObject
     void closed();
     void started();
     void stopped();
+    void frameCaptured(const QSharedPointer<V4L2Frame>& _capturedFrame);
     void fpsReported(qreal _fps);
 
   public slots:
@@ -96,8 +149,11 @@ class V4L2 : public QObject
     int fd() const;
     bool fd_ioctl(int _request, void* _argp, bool _reportError = true, int* _errno = NULL);
 
+    void emitFrameCaptured(const QSharedPointer<V4L2Frame>& _capturedFrame);
+    void emitFpsReported(qreal _fps);
+
   protected slots:
-    void frameReady();
+    void frameReadyIndication();
     void reportFps();
 
   private:

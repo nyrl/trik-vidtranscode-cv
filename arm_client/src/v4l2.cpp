@@ -95,15 +95,34 @@ class FdHandle
 
 
 int
-V4L2BufferMapper::v4l2_fd(const QPointer<V4L2>& _v4l2)
+V4L2BufferMapper::v4l2_fd()
 {
-  return _v4l2->fd();
+  return m_v4l2->fd();
 }
 
 bool
-V4L2BufferMapper::v4l2_ioctl(const QPointer<V4L2>& _v4l2, int _request, void* _argp, bool _reportError, int* _errno)
+V4L2BufferMapper::v4l2_ioctl(int _request, void* _argp, bool _reportError, int* _errno)
 {
-  return _v4l2->fd_ioctl(_request, _argp, _reportError, _errno);
+  return m_v4l2->fd_ioctl(_request, _argp, _reportError, _errno);
+}
+
+void
+V4L2BufferMapper::attach(const QPointer<V4L2>& _v4l2)
+{
+  if (m_v4l2)
+    qWarning() << "V4L2 buffer mapper already attached, dropping";
+  m_v4l2 = _v4l2;
+}
+
+void
+V4L2BufferMapper::detach(const QPointer<V4L2>& _v4l2)
+{
+  if (m_v4l2 != _v4l2)
+  {
+    qWarning() << "V4L2 buffer mapper detach attempt rejected";
+    return;
+  }
+  m_v4l2 = QPointer<V4L2>();
 }
 
 
@@ -212,16 +231,14 @@ V4L2BufferMapperMemoryMmap::buffersCount() const
 }
 
 bool
-V4L2BufferMapperMemoryMmap::map(const QPointer<V4L2>& _v4l2)
+V4L2BufferMapperMemoryMmap::map()
 {
-  Q_CHECK_PTR(_v4l2);
-
   v4l2_requestbuffers requestBuffers = v4l2_requestbuffers();
   requestBuffers.count = m_desiredBuffersCount;
   requestBuffers.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
   requestBuffers.memory = V4L2_MEMORY_MMAP;
 
-  if (!v4l2_ioctl(_v4l2, VIDIOC_REQBUFS, &requestBuffers))
+  if (!v4l2_ioctl(VIDIOC_REQBUFS, &requestBuffers))
     return false;
 
   m_storage.reset();
@@ -233,13 +250,13 @@ V4L2BufferMapperMemoryMmap::map(const QPointer<V4L2>& _v4l2)
     buffer.type = requestBuffers.type;
     buffer.memory = requestBuffers.memory;
 
-    if (!v4l2_ioctl(_v4l2, VIDIOC_QUERYBUF, &buffer))
+    if (!v4l2_ioctl(VIDIOC_QUERYBUF, &buffer))
     {
       qWarning() << "V4L2 query buffer failed";
       return false;
     }
 
-    storage->setMapping(idx, v4l2_fd(_v4l2), buffer.length, buffer.m.offset);
+    storage->setMapping(idx, v4l2_fd(), buffer.length, buffer.m.offset);
   }
 
   m_storage.swap(storage);
@@ -248,20 +265,28 @@ V4L2BufferMapperMemoryMmap::map(const QPointer<V4L2>& _v4l2)
 }
 
 bool
-V4L2BufferMapperMemoryMmap::unmap(const QPointer<V4L2>& _v4l2)
+V4L2BufferMapperMemoryMmap::unmap()
 {
-  Q_CHECK_PTR(_v4l2);
-
   m_storage.reset();
 
   return true;
 }
 
 bool
-V4L2BufferMapperMemoryMmap::queue(const QPointer<V4L2>& _v4l2, size_t _index)
+V4L2BufferMapperMemoryMmap::queueAll()
 {
-  Q_CHECK_PTR(_v4l2);
+  for (size_t idx = 0; idx < m_storage->count(); ++idx)
+  {
+    if (!queue(idx))
+      return false;
+  }
 
+  return true;
+}
+
+bool
+V4L2BufferMapperMemoryMmap::queue(size_t _index)
+{
   if (_index >= buffersCount())
     return false;
 
@@ -270,7 +295,7 @@ V4L2BufferMapperMemoryMmap::queue(const QPointer<V4L2>& _v4l2, size_t _index)
   buffer.type   = V4L2_BUF_TYPE_VIDEO_CAPTURE;
   buffer.memory = V4L2_MEMORY_MMAP;
 
-  if (!v4l2_ioctl(_v4l2, VIDIOC_QBUF, &buffer))
+  if (!v4l2_ioctl(VIDIOC_QBUF, &buffer))
   {
     qWarning() << "V4L2 queue buffer" << _index << "failed";
     return false;
@@ -280,11 +305,34 @@ V4L2BufferMapperMemoryMmap::queue(const QPointer<V4L2>& _v4l2, size_t _index)
 }
 
 bool
-V4L2BufferMapperMemoryMmap::dequeue(const QPointer<V4L2>& _v4l2, size_t _index)
+V4L2BufferMapperMemoryMmap::dequeue(const QSharedPointer<V4L2BufferMapper>& _bufferMapper, QSharedPointer<V4L2Frame>& _capturedFrame)
 {
-  Q_CHECK_PTR(_v4l2);
+  v4l2_buffer buffer = v4l2_buffer();
+  buffer.type   = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+  buffer.memory = V4L2_MEMORY_MMAP;
 
-#warning TODO + api change
+  if (!v4l2_ioctl(VIDIOC_DQBUF, &buffer))
+  {
+    qWarning() << "V4L2 dequeue buffer failed";
+    return false;
+  }
+
+  if (buffer.index >= buffersCount())
+  {
+    qWarning() << "V4L2 dequeue buffer" << buffer.index << "is out of range";
+    return false;
+  }
+
+  void* ptr;
+  size_t size;
+  if (!m_storage->getMapping(buffer.index, ptr, size))
+  {
+    qWarning() << "V4L2 dequeue buffer" << buffer.index << "not mapped";
+    return false;
+  }
+
+  _capturedFrame = QSharedPointer<V4L2Frame>(new V4L2Frame(_bufferMapper, ptr, size, buffer.index));
+
   return true;
 }
 
@@ -343,7 +391,7 @@ class V4L2::OpenCloseHandler
   private:
     QPointer<V4L2> m_v4l2;
     QScopedPointer<FdHandle> m_fd;
-    ImageFormat  m_imageFormat;
+    ImageFormat              m_imageFormat;
 
 
     void reportEmulatedFormats() const
@@ -394,7 +442,6 @@ class V4L2::OpenCloseHandler
       return true;
     }
 
-
     OpenCloseHandler(const OpenCloseHandler&) = delete;
     OpenCloseHandler& operator=(const OpenCloseHandler&) = delete;
 };
@@ -405,25 +452,83 @@ class V4L2::OpenCloseHandler
 class V4L2::RunningHandler
 {
   public:
+    class BufferMapperWrapper
+    {
+      public:
+        BufferMapperWrapper(const QPointer<V4L2>& _v4l2, const QSharedPointer<V4L2BufferMapper>& _bufferMapper)
+         :m_v4l2(_v4l2),
+          m_bufferMapper(_bufferMapper),
+          m_opened(false)
+        {
+          Q_CHECK_PTR(m_v4l2);
+
+          if (!m_bufferMapper)
+            return;
+
+          m_bufferMapper->attach(m_v4l2);
+
+          if (!m_bufferMapper->map())
+          {
+            qWarning() << "V4L2 map failed";
+            return;
+          }
+
+          if (!m_bufferMapper->queueAll())
+          {
+            qWarning() << "V4L2 queue all failed";
+            return;
+          }
+
+          m_opened = true;
+        }
+
+        ~BufferMapperWrapper()
+        {
+          if (!m_bufferMapper)
+            return;
+
+          // do not de-queue buffers
+          m_bufferMapper->unmap();
+          m_bufferMapper->detach(m_v4l2);
+        }
+
+        bool opened() const
+        {
+          return m_opened;
+        }
+
+        bool captureFrame(QSharedPointer<V4L2Frame>& _capturedFrame)
+        {
+          if (!opened() || !m_bufferMapper)
+            return false;
+
+          return m_bufferMapper->dequeue(m_bufferMapper, _capturedFrame);
+        }
+
+      private:
+        QPointer<V4L2> m_v4l2;
+        QSharedPointer<V4L2BufferMapper> m_bufferMapper;
+        bool m_opened;
+
+        BufferMapperWrapper(const BufferMapperWrapper&) = delete;
+        BufferMapperWrapper& operator=(const BufferMapperWrapper&) = delete;
+    };
+
+
     explicit RunningHandler(const QPointer<V4L2>& _v4l2) :m_v4l2(_v4l2) {}
     ~RunningHandler() { close(); }
 
     bool open(const V4L2::Config& _config)
     {
-      m_bufferMapper = _config.m_bufferMapper;
-      if (m_bufferMapper)
+      m_bufferMapper.reset(new BufferMapperWrapper(m_v4l2, _config.m_bufferMapper));
+      if (!m_bufferMapper->opened())
       {
-        if (!m_bufferMapper->map(m_v4l2))
-        {
-          m_bufferMapper.clear();
-          qWarning() << "V4L2 map failed";
-          return false;
-        }
-#warning TODO queue all buffers
+        m_bufferMapper.reset();
+        return false;
       }
 
       m_frameReadyNotifier.reset(new QSocketNotifier(m_v4l2->fd(), QSocketNotifier::Read, m_v4l2));
-      connect(m_frameReadyNotifier.data(), SIGNAL(activated(int)), m_v4l2, SLOT(frameReady()));
+      connect(m_frameReadyNotifier.data(), SIGNAL(activated(int)), m_v4l2, SLOT(frameReadyIndication()));
 
       if (!startCapture())
       {
@@ -442,30 +547,32 @@ class V4L2::RunningHandler
 
       stopCapture();
       m_frameReadyNotifier.reset();
-      if (m_bufferMapper)
+      m_bufferMapper.reset();
+    }
+
+    void frameReadyIndication()
+    {
+      QSharedPointer<V4L2Frame> capturedFrame;
+      if (!m_bufferMapper || !m_bufferMapper->captureFrame(capturedFrame))
       {
-        // do not de-queue buffers
-        m_bufferMapper->unmap(m_v4l2);
+        qWarning() << "V4L2 cannot capture frame";
+        return;
       }
-      m_bufferMapper.clear();
+
+      m_v4l2->emitFrameCaptured(capturedFrame);
     }
 
-    void frameReady()
+    void reportFps() const
     {
-#warning TODO
-      qDebug() << __func__;
-    }
-
-    void reportFps()
-    {
-#warning TODO
-      qDebug() << __func__;
+      qreal fps;
+#warning TODO calc fps
+      m_v4l2->emitFpsReported(fps);
     }
 
   private:
     QPointer<V4L2> m_v4l2;
-    QSharedPointer<V4L2BufferMapper> m_bufferMapper;
-    QScopedPointer<QSocketNotifier> m_frameReadyNotifier;
+    QScopedPointer<BufferMapperWrapper> m_bufferMapper;
+    QScopedPointer<QSocketNotifier>     m_frameReadyNotifier;
 
     bool startCapture()
     {
@@ -608,10 +715,10 @@ V4L2::stop()
 }
 
 void
-V4L2::frameReady()
+V4L2::frameReadyIndication()
 {
   if (m_runningHandler)
-    m_runningHandler->frameReady();
+    m_runningHandler->frameReadyIndication();
 }
 
 void
@@ -630,6 +737,24 @@ V4L2::fd() const
   return m_openCloseHandler->fd();
 }
 
+void
+V4L2::emitFrameCaptured(const QSharedPointer<V4L2Frame>& _capturedFrame)
+{
+#warning Temporary
+  qDebug() << __func__ << "frame" << _capturedFrame->index() << _capturedFrame->ptr() << _capturedFrame->size();
+
+  emit frameCaptured(_capturedFrame);
+}
+
+void
+V4L2::emitFpsReported(qreal _fps)
+{
+#warning Temporary
+  qDebug() << __func__ << _fps;
+
+  emit fpsReported(_fps);
+}
+
 bool
 V4L2::fd_ioctl(int _request, void* _argp, bool _reportError, int* _errno)
 {
@@ -644,7 +769,6 @@ V4L2::fd_ioctl(int _request, void* _argp, bool _reportError, int* _errno)
 
   return m_openCloseHandler->ioctl(_request, _argp, _reportError, _errno);
 }
-
 
 
 } // namespace trik
