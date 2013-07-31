@@ -2,8 +2,7 @@
 #define VIDTRANSCODE_CV_ARM_CLIENT_INCLUDE_INTERNAL_IMAGE_H_
 
 
-#include <inttypes.h>
-
+#include <QtGlobal>
 #include <QString>
 #include <QDataStream>
 
@@ -15,11 +14,11 @@ class FormatID
 {
   public:
     FormatID() : m_fmt() {}
-    explicit FormatID(uint32_t _fmt) : m_fmt(_fmt) {}
+    explicit FormatID(quint32 _fmt) : m_fmt(_fmt) {}
 
     operator bool() const { return m_fmt != 0; }
 
-    uint32_t id() const { return m_fmt; }
+    quint32 id() const { return m_fmt; }
 
     QString toString() const
     {
@@ -36,7 +35,7 @@ class FormatID
     }
 
   private:
-    uint32_t m_fmt;
+    quint32 m_fmt;
 };
 
 
@@ -44,8 +43,8 @@ struct ImageFormat
 {
   ImageFormat() : m_width(), m_height(), m_format(), m_lineLength(), m_size() {}
 
-  int16_t  m_width;
-  int16_t  m_height;
+  size_t   m_width;
+  size_t   m_height;
   FormatID m_format;
   size_t   m_lineLength;
   size_t   m_size;

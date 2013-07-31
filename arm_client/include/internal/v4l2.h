@@ -7,7 +7,6 @@
 #include <QPointer>
 #include <QScopedPointer>
 #include <QSharedPointer>
-#include <inttypes.h>
 
 #include "internal/image.h"
 
