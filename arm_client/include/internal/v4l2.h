@@ -144,6 +144,8 @@ class V4L2 : public QObject
     bool start();
     bool stop();
 
+    void reportFps();
+
   protected:
     int fd() const;
     bool fd_ioctl(int _request, void* _argp, bool _reportError = true, int* _errno = NULL);
@@ -153,7 +155,6 @@ class V4L2 : public QObject
 
   protected slots:
     void frameReadyIndication();
-    void reportFps();
 
   private:
     friend class V4L2BufferMapper;

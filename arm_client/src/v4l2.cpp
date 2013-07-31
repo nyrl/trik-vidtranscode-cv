@@ -4,6 +4,7 @@
 #include <QByteArray>
 #include <QScopedArrayPointer>
 #include <QSocketNotifier>
+#include <QTime>
 
 #include <errno.h>
 #include <fcntl.h>
@@ -240,6 +241,9 @@ V4L2BufferMapperMemoryMmap::map()
 
   if (!v4l2_ioctl(VIDIOC_REQBUFS, &requestBuffers))
     return false;
+
+  if (requestBuffers.count != m_desiredBuffersCount)
+    qWarning() << "V4L2 demands" << requestBuffers.count << "buffers while" << m_desiredBuffersCount << "desired";
 
   m_storage.reset();
   QScopedPointer<Storage> storage(new Storage(requestBuffers.count));
@@ -514,6 +518,38 @@ class V4L2::RunningHandler
         BufferMapperWrapper& operator=(const BufferMapperWrapper&) = delete;
     };
 
+    class FpsCounter
+    {
+      public:
+        FpsCounter()
+         :m_timeout(),
+          m_count()
+        {
+          m_timeout.start();
+        }
+
+        void frame()
+        {
+          ++m_count;
+        }
+
+        qreal calcFps()
+        {
+          int ms = m_timeout.restart();
+          qreal fps = (ms > 0)
+                    ? (static_cast<qreal>(m_count) * static_cast<qreal>(1000.0))/ static_cast<qreal>(ms)
+                    :  static_cast<qreal>(m_count);
+          m_count = 0;
+          return fps;
+        }
+
+      private:
+        QTime  m_timeout;
+        size_t m_count;
+
+        FpsCounter(const FpsCounter&) = delete;
+        FpsCounter operator=(const FpsCounter&) = delete;
+    };
 
     explicit RunningHandler(const QPointer<V4L2>& _v4l2) :m_v4l2(_v4l2) {}
     ~RunningHandler() { close(); }
@@ -530,22 +566,21 @@ class V4L2::RunningHandler
       m_frameReadyNotifier.reset(new QSocketNotifier(m_v4l2->fd(), QSocketNotifier::Read, m_v4l2));
       connect(m_frameReadyNotifier.data(), SIGNAL(activated(int)), m_v4l2, SLOT(frameReadyIndication()));
 
+      m_fpsCounter.reset(new FpsCounter());
+
       if (!startCapture())
       {
         qWarning() << "V4L2 queue buffers failed";
         return false;
       }
 
-#warning TODO timer for FPS reporting
-
       return true;
     }
 
     void close()
     {
-#warning TODO
-
       stopCapture();
+      m_fpsCounter.reset();
       m_frameReadyNotifier.reset();
       m_bufferMapper.reset();
     }
@@ -559,20 +594,23 @@ class V4L2::RunningHandler
         return;
       }
 
+      if (m_fpsCounter)
+        m_fpsCounter->frame();
+
       m_v4l2->emitFrameCaptured(capturedFrame);
     }
 
     void reportFps() const
     {
-      qreal fps;
-#warning TODO calc fps
-      m_v4l2->emitFpsReported(fps);
+      if (m_fpsCounter)
+        m_v4l2->emitFpsReported(m_fpsCounter->calcFps());
     }
 
   private:
     QPointer<V4L2> m_v4l2;
     QScopedPointer<BufferMapperWrapper> m_bufferMapper;
     QScopedPointer<QSocketNotifier>     m_frameReadyNotifier;
+    QScopedPointer<FpsCounter>          m_fpsCounter;
 
     bool startCapture()
     {
@@ -616,6 +654,8 @@ V4L2::V4L2(QObject* _parent)
   m_runningHandler()
 {
   m_config.m_path = "/dev/video0";
+  m_config.m_imageFormat.m_width = 640;
+  m_config.m_imageFormat.m_height = 480;
   m_config.m_imageFormat.m_format = FormatID(V4L2_PIX_FMT_YUYV);
   m_config.m_bufferMapper = QSharedPointer<V4L2BufferMapper>(new V4L2BufferMapperMemoryMmap(2));
 }
@@ -655,6 +695,9 @@ V4L2::open()
     qWarning() << "V4L2 open failed";
     return false;
   }
+
+#warning Temporary
+  qDebug() << __func__ << m_openCloseHandler->imageFormat().m_width << "x" << m_openCloseHandler->imageFormat().m_height;
 
   emit opened(m_openCloseHandler->imageFormat());
 
