@@ -441,6 +441,16 @@ class V4L2::OpenCloseHandler
       m_imageFormat.m_lineLength = format.fmt.pix.bytesperline;
       m_imageFormat.m_size       = format.fmt.pix.sizeimage;
 
+
+#warning Temporary, to be replaced by set fps
+#if 1
+      v4l2_streamparm streamparm = v4l2_streamparm();
+      streamparm.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+      if (!m_fd->ioctl(VIDIOC_S_PARM, &streamparm, true, NULL))
+        return false;
+      qDebug() << "Frame rate" << streamparm.parm.capture.timeperframe.numerator << "/" << streamparm.parm.capture.timeperframe.denominator;
+#endif
+
       reportEmulatedFormats();
 
       return true;
