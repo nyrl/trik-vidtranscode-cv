@@ -64,8 +64,8 @@ XDAS_Int32 trikCvHandleSetupDynamicParams(TrikCvHandle* _handle,
 {
   static const TRIK_VIDTRANSCODE_CV_DynamicParams s_default = {
     {								/* m_base, IVIDTRANSCODE_DynamicParams */
-      sizeof(TRIK_VIDTRANSCODE_CV_DynamicParams),			/* size = size of structure */
-      0,								/* readHeaderOnlyFlag = false */
+      sizeof(TRIK_VIDTRANSCODE_CV_DynamicParams),		/* size = size of structure */
+      0,							/* readHeaderOnlyFlag = false */
       {
         XDAS_FALSE,						/* keepInputResolutionFlag[0] = false, override resolution */
         XDAS_TRUE,						/* keepInputResolutionFlag[1] - disabled */
@@ -82,7 +82,7 @@ XDAS_Int32 trikCvHandleSetupDynamicParams(TrikCvHandle* _handle,
         XDAS_TRUE,						/* keepInputFrameRateFlag[0] = keep framerate */
         XDAS_TRUE,						/* keepInputFrameRateFlag[1] - don't care */
       },
-      -1,								/* inputFrameRate = ignored when keepInputFrameRateFlag */
+      -1,							/* inputFrameRate = ignored when keepInputFrameRateFlag */
       {
         -1,							/* outputFrameRate[0] = ignored when keepInputFrameRateFlag */
         -1,							/* outputFrameRate[1] - don't care */
@@ -108,8 +108,8 @@ XDAS_Int32 trikCvHandleSetupDynamicParams(TrikCvHandle* _handle,
         0,							/* interFrameInterval[1] - don't care */
       },
       {
-        IVIDEO_NA_FRAME,						/* forceFrame[0] = ignored by codec */
-        IVIDEO_NA_FRAME,						/* forceFrame[1] - don't care */
+        IVIDEO_NA_FRAME,					/* forceFrame[0] = ignored by codec */
+        IVIDEO_NA_FRAME,					/* forceFrame[1] - don't care */
       },
       {
         XDAS_FALSE,						/* frameSkipTranscodeFlag[0] = ignored by codec */
@@ -120,8 +120,8 @@ XDAS_Int32 trikCvHandleSetupDynamicParams(TrikCvHandle* _handle,
     -1,								/* inputWidth  - derived from params in initObj*/
     -1,								/* inputLineLength - default, to be calculated base on width */
     {
-      -1,								/* outputLineLength - default, to be calculated base on width */
-      -1,								/* outputLineLength - default, to be calculated base on width */
+      -1,							/* outputLineLength - default, to be calculated base on width */
+      -1,							/* outputLineLength - default, to be calculated base on width */
     }
   };
 
