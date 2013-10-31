@@ -51,7 +51,7 @@ XDAS_Int32 trikCvHandleSetupParams(TrikCvHandle* _handle,
 
   _handle->m_params = *_params;
 
-#warning Actually check dynamic params and return IALG_EOK / IALG_EFAIL
+#warning Actually check params and return IALG_EOK / IALG_EFAIL
 
   return IALG_EOK;
 }
