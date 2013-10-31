@@ -170,7 +170,6 @@ XDAS_Int32 TRIK_VIDTRANSCODE_CV_process(
     XDM1_SingleBufDesc* xdmOutBuf;
     TrikCvImage inImage;
     TrikCvImage outImage;
-    TrikCvImageTargets outImageTargets;
 
     XDAS_Int32 res;
 
@@ -239,11 +238,7 @@ XDAS_Int32 TRIK_VIDTRANSCODE_CV_process(
         outImage.m_lineLength		= 0;
     }
 
-    outImageTargets.m_targets = vidOutArgs->targets;
-    outImageTargets.m_usedTargets = 0;
-    outImageTargets.m_maxTargets = sizeof(vidOutArgs->targets)/sizeof(*vidOutArgs->targets);
-
-    if ((res = trikCvProceedImage(&inImage, &outImage, &outImageTargets)) != IVIDTRANSCODE_EOK)
+    if ((res = trikCvProceedImage(&inImage, &outImage, &vidInArgs->alg, &vidOutArgs->alg)) != IVIDTRANSCODE_EOK)
     {
         XDM_SETCORRUPTEDDATA(vidOutArgs->base.extendedError);
         return res;
@@ -261,7 +256,6 @@ XDAS_Int32 TRIK_VIDTRANSCODE_CV_process(
         vidOutArgs->base.inputFrameSkipTranscodeFlag[0]	= XDAS_FALSE;
     }
 
-    vidOutArgs->numTargets				= outImageTargets.m_usedTargets;
     vidOutArgs->base.outBufsInUseFlag			= XDAS_FALSE;
 
     return IVIDTRANSCODE_EOK;

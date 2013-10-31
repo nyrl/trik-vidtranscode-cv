@@ -41,25 +41,34 @@ typedef struct TRIK_VIDTRANSCODE_CV_DynamicParams {
     XDAS_Int32			inputWidth;
     XDAS_Int32			inputLineLength;
 
-    XDAS_Int32			outputLineLength[2];
+    XDAS_Int32			outputLineLength[IVIDTRANSCODE_MAXOUTSTREAMS];
 } TRIK_VIDTRANSCODE_CV_DynamicParams;
 
 
+typedef struct TRIK_VIDTRANSCODE_CV_InArgsAlg {
+    XDAS_Int32		detectHueFrom; // 0..360
+    XDAS_Int32		detectHueTo;   // 0..360
+    XDAS_Int32		detectSatFrom; // 0..100
+    XDAS_Int32		detectSatTo;   // 0..100
+    XDAS_Int32		detectValFrom; // 0..100
+    XDAS_Int32		detectValTo;   // 0..100
+} TRIK_VIDTRANSCODE_CV_InArgsAlg;
+
 typedef struct TRIK_VIDTRANSCODE_CV_InArgs {
-    IVIDTRANSCODE_InArgs	base;
+    IVIDTRANSCODE_InArgs		base;
+    TRIK_VIDTRANSCODE_CV_InArgsAlg	alg;
 } TRIK_VIDTRANSCODE_CV_InArgs;
 
 
-typedef struct TRIK_VIDTRANSCODE_CV_ImageTarget {
-    XDM_Point m_center;
-    XDM_Rect  m_bound;
-} TRIK_VIDTRANSCODE_CV_ImageTarget;
+typedef struct TRIK_VIDTRANSCODE_CV_OutArgsAlg {
+    XDAS_Int32		targetX;    // -100..100
+    XDAS_Int32		targetY;    // -100..100
+    XDAS_Int32		targetMass; // 0..10000
+} TRIK_VIDTRANSCODE_CV_OutArgsAlg;
 
 typedef struct TRIK_VIDTRANSCODE_CV_OutArgs {
-    IVIDTRANSCODE_OutArgs	     base;
-    TRIK_VIDTRANSCODE_CV_ImageTarget targets[64];
-    XDAS_Int32                       numTargets;
-
+    IVIDTRANSCODE_OutArgs		base;
+    TRIK_VIDTRANSCODE_CV_OutArgsAlg	alg;
 } TRIK_VIDTRANSCODE_CV_OutArgs;
 
 

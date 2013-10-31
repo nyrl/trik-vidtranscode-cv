@@ -138,10 +138,11 @@ XDAS_Int32 trikCvHandleSetupDynamicParams(TrikCvHandle* _handle,
 }
 
 
-XDAS_Int32 trikCvProceedImage(const TrikCvImage* _inImage, TrikCvImage* _outImage, TrikCvImageTargets* _outImageTargets)
+XDAS_Int32 trikCvProceedImage(const TrikCvImage* _inImage, TrikCvImage* _outImage,
+                              const TRIK_VIDTRANSCODE_CV_InArgsAlg* _inArgs,
+                              TRIK_VIDTRANSCODE_CV_OutArgsAlg* _outArgs)
 {
-  Log_print0(Diags_USER7, "[+7] trikCvProceedImage called.");
-
+#warning TODO
   return IVIDTRANSCODE_EOK;
 }
 

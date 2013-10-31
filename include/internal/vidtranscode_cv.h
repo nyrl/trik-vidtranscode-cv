@@ -32,17 +32,12 @@ typedef struct TrikCvImage {
 } TrikCvImage;
 
 
-typedef struct TrikCvImageTargets {
-    TRIK_VIDTRANSCODE_CV_ImageTarget* m_targets;
-    XDAS_Int32                        m_maxTargets;
-    XDAS_Int32                        m_usedTargets;
-} TrikCvImageTargets;
-
-
 XDAS_Int32 trikCvHandleSetupParams(TrikCvHandle* _handle, const TRIK_VIDTRANSCODE_CV_Params* _params);
 XDAS_Int32 trikCvHandleSetupDynamicParams(TrikCvHandle* _handle, const TRIK_VIDTRANSCODE_CV_DynamicParams* _dynamicParams);
 
-XDAS_Int32 trikCvProceedImage(const TrikCvImage* _inImage, TrikCvImage* _outImage, TrikCvImageTargets* _outImageTargets);
+XDAS_Int32 trikCvProceedImage(const TrikCvImage* _inImage, TrikCvImage* _outImage,
+                              const TRIK_VIDTRANSCODE_CV_InArgsAlg* _inArgs,
+                              TRIK_VIDTRANSCODE_CV_OutArgsAlg* _outArgs);
 
 
 #ifdef __cplusplus
