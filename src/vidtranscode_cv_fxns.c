@@ -232,7 +232,7 @@ XDAS_Int32 TRIK_VIDTRANSCODE_CV_process(
         xdmOutBuf			= NULL;
         outImage.m_ptr			= NULL;
         outImage.m_size			= 0;
-        outImage.m_format		= 0;
+        outImage.m_format		= TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_UNKNOWN;
         outImage.m_width		= 0;
         outImage.m_height		= 0;
         outImage.m_lineLength		= 0;
