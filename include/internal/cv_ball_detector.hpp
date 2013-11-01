@@ -315,6 +315,7 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
         return false;
       if (m_outImageDesc.m_height * m_outImageDesc.m_lineLength > _outImage.m_size)
         return false;
+      _outImage.m_size = m_outImageDesc.m_height * m_outImageDesc.m_lineLength;
 
       m_detectHueFrom = range<XDAS_Int16>(0, (_inArgs.detectHueFrom * 255) / 359, 255); // scaling 0..359 to 0..255
       m_detectHueTo   = range<XDAS_Int16>(0, (_inArgs.detectHueTo   * 255) / 359, 255); // scaling 0..359 to 0..255
@@ -341,7 +342,6 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
         for (TrikCvImageDimension srcCol=0; srcCol < m_inImageDesc.m_width; srcCol+=2)
           proceedTwoYuyvPixels(*srcImage++, srcCol, srcRow, dstImage);
       }
-
 
       const TrikCvImageDimension inImagePixels = m_inImageDesc.m_width * m_inImageDesc.m_height;
       if (inImagePixels > 0)
