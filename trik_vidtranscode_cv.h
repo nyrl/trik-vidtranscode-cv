@@ -46,12 +46,12 @@ typedef struct TRIK_VIDTRANSCODE_CV_DynamicParams {
 
 
 typedef struct TRIK_VIDTRANSCODE_CV_InArgsAlg {
-    XDAS_Int32		detectHueFrom; // 0..360
-    XDAS_Int32		detectHueTo;   // 0..360
-    XDAS_Int32		detectSatFrom; // 0..100
-    XDAS_Int32		detectSatTo;   // 0..100
-    XDAS_Int32		detectValFrom; // 0..100
-    XDAS_Int32		detectValTo;   // 0..100
+    XDAS_Int16		detectHueFrom; // [0..359]
+    XDAS_Int16		detectHueTo;   // [0..359]
+    XDAS_Int16		detectSatFrom; // [0..100]
+    XDAS_Int16		detectSatTo;   // [0..100]
+    XDAS_Int16		detectValFrom; // [0..100]
+    XDAS_Int16		detectValTo;   // [0..100]
 } TRIK_VIDTRANSCODE_CV_InArgsAlg;
 
 typedef struct TRIK_VIDTRANSCODE_CV_InArgs {
@@ -61,9 +61,9 @@ typedef struct TRIK_VIDTRANSCODE_CV_InArgs {
 
 
 typedef struct TRIK_VIDTRANSCODE_CV_OutArgsAlg {
-    XDAS_Int32		targetX;    // -100..100
-    XDAS_Int32		targetY;    // -100..100
-    XDAS_Int32		targetMass; // 0..10000
+    XDAS_Int16		targetX;    // [-100..100]
+    XDAS_Int16		targetY;    // [-100..100]
+    XDAS_Int16		targetMass; // [0..10000]
 } TRIK_VIDTRANSCODE_CV_OutArgsAlg;
 
 typedef struct TRIK_VIDTRANSCODE_CV_OutArgs {
