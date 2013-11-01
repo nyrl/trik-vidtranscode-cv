@@ -9,10 +9,29 @@
 
 
 
+#if 1
 namespace trik
 {
-  class CVBallDetector;
+  class CVAlgorithm
+  {
+    public:
+      virtual bool setup(const TrikCvImageDesc& _inImageDesc, const TrikCvImageDesc& _outImageDesc) = 0;
+      virtual bool run(const TrikCvImageBuffer& _inImage, TrikCvImageBuffer& _outImage,
+                       const TrikCvAlgInArgs& _inArgs, TrikCvAlgOutArgs& _outArgs) = 0;
+  };
+
+  template <TrikCvImageFormat _inFormat, TrikCvImageFormat _outFormat>
+  class CVBallDetector : public CVAlgorithm
+  {
+    public:
+      CVBallDetector() {};
+
+      virtual bool setup(const TrikCvImageDesc& _inImageDesc, const TrikCvImageDesc& _outImageDesc) { return false; }
+      virtual bool run(const TrikCvImageBuffer& _inImage, TrikCvImageBuffer& _outImage,
+                       const TrikCvAlgInArgs& _inArgs, TrikCvAlgOutArgs& _outArgs) { return false; }
+  };
 };
+#endif
 
 
 
@@ -24,7 +43,8 @@ struct TrikCvPersistentData
 
   TrikCvImageDesc m_inImageDesc;
   TrikCvImageDesc m_outImageDesc;
-#warning TODO
+
+  std::auto_ptr<trik::CVAlgorithm> m_cvAlgorithm;
 };
 
 
@@ -60,10 +80,16 @@ static TrikCvPersistentData& getHandlePersistentData(TrikCvHandle* _handle)
 
 
 
-template <typename _CVAlgorithm, TrikCvImageFormat _inFormat, TrikCvImageFormat _outFormat>
+template <typename _CVAlgorithm>
 XDAS_Int32 createCVAlgorithm(TrikCvPersistentData& _pd)
 {
-#warning TODO
+  _pd.m_cvAlgorithm.reset(new _CVAlgorithm());
+  if (!_pd.m_cvAlgorithm->setup(_pd.m_inImageDesc, _pd.m_outImageDesc))
+  {
+    Log_error0("CV algorithm setup failed");
+    return IALG_EFAIL;
+  }
+
   return IALG_EOK;
 }
 
@@ -74,7 +100,7 @@ XDAS_Int32 handleSetupImageDescCreateCVAlgorithm(TrikCvPersistentData& _pd)
 {
 #define IF_IN_OUT_FORMAT(_CVAlgorithm, _inFormat, _outFormat) \
   if (_pd.m_inImageDesc.m_format == _inFormat && _pd.m_outImageDesc.m_format == _outFormat) \
-    return createCVAlgorithm<_CVAlgorithm, _inFormat, _outFormat>(_pd)
+    return createCVAlgorithm<_CVAlgorithm<_inFormat, _outFormat> >(_pd)
 
   IF_IN_OUT_FORMAT(trik::CVBallDetector, TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_RGB565X);
   IF_IN_OUT_FORMAT(trik::CVBallDetector, TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_RGB888, TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_RGB565X);
@@ -179,7 +205,6 @@ XDAS_Int32 trikCvHandleSetupParams(TrikCvHandle* _handle,
       XDM_BYTE						/* dataEndianness = byte only */
     }
   };
-  XDAS_Int32 res;
 
   assert(_handle);
 
@@ -286,20 +311,33 @@ XDAS_Int32 trikCvHandleSetupDynamicParams(TrikCvHandle* _handle,
 
 
 
-XDAS_Int32 trikCvProceedImage(const TrikCvImageBuffer* _inImage, TrikCvImageBuffer* _outImage,
-                              const TRIK_VIDTRANSCODE_CV_InArgsAlg* _inArgs,
-                              TRIK_VIDTRANSCODE_CV_OutArgsAlg* _outArgs)
+XDAS_Int32 trikCvProceedImage(TrikCvHandle* _handle,
+                              const TrikCvImageBuffer* _inImage, TrikCvImageBuffer* _outImage,
+                              const TrikCvAlgInArgs* _inArgs, TrikCvAlgOutArgs* _outArgs)
 {
-  XDAS_Int32 res;
-
-  if (_inImage == NULL || _outImage == NULL || _inArgs == NULL || _outArgs == NULL)
+  if (_handle == NULL || _inImage == NULL || _outImage == NULL || _inArgs == NULL || _outArgs == NULL)
+  {
+    Log_error0("Invalid image arguments");
     return IVIDTRANSCODE_EFAIL;
+  }
+  TrikCvPersistentData& pd = getHandlePersistentData(_handle);
+
+  if (!pd.m_cvAlgorithm.get())
+  {
+    Log_error0("CV algorithm not created");
+    return IVIDTRANSCODE_EFAIL;
+  }
 
 #warning TODO check buffer against image descriptions?
 
 #warning TODO more sanity checks?
 
-#warning TODO call something
+
+  if (!pd.m_cvAlgorithm->run(*_inImage, *_outImage, *_inArgs, *_outArgs))
+  {
+    Log_error0("CV algorithm run failed");
+    return IVIDTRANSCODE_EFAIL;
+  }
 
   return IVIDTRANSCODE_EOK;
 }

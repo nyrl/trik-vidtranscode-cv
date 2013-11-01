@@ -227,7 +227,7 @@ XDAS_Int32 TRIK_VIDTRANSCODE_CV_process(
         outImage.m_size			= 0;
     }
 
-    if ((res = trikCvProceedImage(&inImage, &outImage, &vidInArgs->alg, &vidOutArgs->alg)) != IVIDTRANSCODE_EOK)
+    if ((res = trikCvProceedImage(handle, &inImage, &outImage, &vidInArgs->alg, &vidOutArgs->alg)) != IVIDTRANSCODE_EOK)
     {
         XDM_SETCORRUPTEDDATA(vidOutArgs->base.extendedError);
         return res;

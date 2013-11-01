@@ -47,7 +47,8 @@ XDAS_Int32 trikCvHandleDestroy(TrikCvHandle* _handle);
 XDAS_Int32 trikCvHandleSetupParams(TrikCvHandle* _handle, const TRIK_VIDTRANSCODE_CV_Params* _params);
 XDAS_Int32 trikCvHandleSetupDynamicParams(TrikCvHandle* _handle, const TRIK_VIDTRANSCODE_CV_DynamicParams* _dynamicParams);
 
-XDAS_Int32 trikCvProceedImage(const TrikCvImageBuffer* _inImage, TrikCvImageBuffer* _outImage,
+XDAS_Int32 trikCvProceedImage(TrikCvHandle* _handle,
+                              const TrikCvImageBuffer* _inImage, TrikCvImageBuffer* _outImage,
                               const TrikCvAlgInArgs* _inArgs, TrikCvAlgOutArgs* _outArgs);
 
 
