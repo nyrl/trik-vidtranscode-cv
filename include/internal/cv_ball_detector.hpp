@@ -99,7 +99,6 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
       max = _r;
       med = _g;
       min = _b;
-      hsv_base = 0;
       hsv_is_incr = true;
 
       // INTERMEDIATE max->r, med->g, min->b
@@ -144,14 +143,14 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
         else
         {
           // FINAL max->r, med->b, min->g
-          // hsv_base = 0;
+          hsv_base = 255;
           hsv_is_incr = false;
         }
       }
       else
       {
         // FINAL max->r, med->g, min->b
-        // hsv_base = 0;
+        hsv_base = 0;
       }
 
 #endif
