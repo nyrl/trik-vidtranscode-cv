@@ -102,16 +102,16 @@ static XDAS_Int32 handleSetupImageDesc(TrikCvHandle* _handle)
   TrikCvImageDesc outImageDesc;
 
   inImageDesc.m_format		= static_cast<TrikCvImageFormat>(_handle->m_params.base.formatInput);
-  inImageDesc.m_width		= _handle->m_dynamicParams.inputWidth;
-  inImageDesc.m_height		= _handle->m_dynamicParams.inputHeight;
-  inImageDesc.m_lineLength	= _handle->m_dynamicParams.inputLineLength;
+  inImageDesc.m_width		= _handle->m_dynamicParams.inputWidth      > 0 ? _handle->m_dynamicParams.inputWidth      : 0;
+  inImageDesc.m_height		= _handle->m_dynamicParams.inputHeight     > 0 ? _handle->m_dynamicParams.inputHeight     : 0;
+  inImageDesc.m_lineLength	= _handle->m_dynamicParams.inputLineLength > 0 ? _handle->m_dynamicParams.inputLineLength : 0;
 
   if (_handle->m_params.base.numOutputStreams == 1)
   {
     outImageDesc.m_format	= static_cast<TrikCvImageFormat>(_handle->m_params.base.formatOutput[0]);
-    outImageDesc.m_width	= _handle->m_dynamicParams.base.outputWidth[0];
-    outImageDesc.m_height	= _handle->m_dynamicParams.base.outputHeight[0];
-    outImageDesc.m_lineLength	= _handle->m_dynamicParams.outputLineLength[0];
+    outImageDesc.m_width	= _handle->m_dynamicParams.base.outputWidth[0]  > 0 ? _handle->m_dynamicParams.base.outputWidth[0]  : 0;
+    outImageDesc.m_height	= _handle->m_dynamicParams.base.outputHeight[0] > 0 ? _handle->m_dynamicParams.base.outputHeight[0] : 0;
+    outImageDesc.m_lineLength	= _handle->m_dynamicParams.outputLineLength[0]  > 0 ? _handle->m_dynamicParams.outputLineLength[0]  : 0;
   }
   else
   {
