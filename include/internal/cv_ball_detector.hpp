@@ -172,31 +172,101 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
       return hsv_h_det && hsv_v_det && hsv_s_det;
     }
 
+
+    void writeRgbPixel(XDAS_UInt16* _rgb,
+                       const XDAS_UInt8 _r, const XDAS_UInt8 _g, const XDAS_UInt8 _b)
+    {
+      *_rgb = (static_cast<XDAS_UInt16>(_r)     >>3)
+            | (static_cast<XDAS_UInt16>(_g&0xfc)<<3)
+            | (static_cast<XDAS_UInt16>(_b&0xf8)<<8);
+    }
+
     void writeRgbPixel(TrikCvImageDimension _srcCol,
                        XDAS_UInt16* _rgbRow,
                        const XDAS_UInt8 _r, const XDAS_UInt8 _g, const XDAS_UInt8 _b)
     {
-      _rgbRow[m_srcToDstColConv[_srcCol]] = (static_cast<XDAS_UInt16>(_r)     >>3)
-                                          | (static_cast<XDAS_UInt16>(_g&0xfc)<<3)
-                                          | (static_cast<XDAS_UInt16>(_b&0xf8)<<8);
+      assert(_srcCol < m_srcToDstColConv.size());
+      const TrikCvImageDimension dstCol = m_srcToDstColConv[_srcCol];
+      writeRgbPixel(&_rgbRow[dstCol], _r, _g, _b);
     }
+
+    void drawRgbPixel(TrikCvImageDimension _srcCol,
+                      TrikCvImageDimension _srcRow,
+                      const TrikCvImageBuffer& _outImage,
+                      const XDAS_UInt8 _r, const XDAS_UInt8 _g, const XDAS_UInt8 _b)
+    {
+      assert(_srcRow < m_srcToDstRowConv.size());
+      const TrikCvImageDimension dstRow = m_srcToDstRowConv[_srcRow];
+
+      assert(_srcCol < m_srcToDstColConv.size());
+      const TrikCvImageDimension dstCol = m_srcToDstColConv[_srcCol];
+
+      const TrikCvImageSize dstOfs = dstRow*m_outImageDesc.m_lineLength + dstCol*sizeof(XDAS_UInt16);
+      XDAS_UInt16* rgbPtr = reinterpret_cast<XDAS_UInt16*>(_outImage.m_ptr + dstOfs);
+      writeRgbPixel(rgbPtr, _r, _g, _b);
+    }
+
+    void drawRgbTargetCross(TrikCvImageDimension _srcCol,
+                            TrikCvImageDimension _srcRow,
+                            const TrikCvImageBuffer& _outImage,
+                            const XDAS_UInt8 _r, const XDAS_UInt8 _g, const XDAS_UInt8 _b)
+    {
+      for (int adj = 10; adj < 20; ++adj)
+      {
+        drawRgbPixel(range<TrikCvImageDimension>(0, _srcCol-adj, m_inImageDesc.m_width-1),
+                     range<TrikCvImageDimension>(0, _srcRow-1  , m_inImageDesc.m_height-1),
+                     _outImage, _r, _g, _b);
+        drawRgbPixel(range<TrikCvImageDimension>(0, _srcCol-adj, m_inImageDesc.m_width-1),
+                     range<TrikCvImageDimension>(0, _srcRow    , m_inImageDesc.m_height-1),
+                     _outImage, _r, _g, _b);
+        drawRgbPixel(range<TrikCvImageDimension>(0, _srcCol-adj, m_inImageDesc.m_width-1),
+                     range<TrikCvImageDimension>(0, _srcRow+1  , m_inImageDesc.m_height-1),
+                     _outImage, _r, _g, _b);
+        drawRgbPixel(range<TrikCvImageDimension>(0, _srcCol+adj, m_inImageDesc.m_width-1),
+                     range<TrikCvImageDimension>(0, _srcRow-1  , m_inImageDesc.m_height-1),
+                     _outImage, _r, _g, _b);
+        drawRgbPixel(range<TrikCvImageDimension>(0, _srcCol+adj, m_inImageDesc.m_width-1),
+                     range<TrikCvImageDimension>(0, _srcRow    , m_inImageDesc.m_height-1),
+                     _outImage, _r, _g, _b);
+        drawRgbPixel(range<TrikCvImageDimension>(0, _srcCol+adj, m_inImageDesc.m_width-1),
+                     range<TrikCvImageDimension>(0, _srcRow+1  , m_inImageDesc.m_height-1),
+                     _outImage, _r, _g, _b);
+        drawRgbPixel(range<TrikCvImageDimension>(0, _srcCol-1  , m_inImageDesc.m_width-1),
+                     range<TrikCvImageDimension>(0, _srcRow-adj, m_inImageDesc.m_height-1),
+                     _outImage, _r, _g, _b);
+        drawRgbPixel(range<TrikCvImageDimension>(0, _srcCol    , m_inImageDesc.m_width-1),
+                     range<TrikCvImageDimension>(0, _srcRow-adj, m_inImageDesc.m_height-1),
+                     _outImage, _r, _g, _b);
+        drawRgbPixel(range<TrikCvImageDimension>(0, _srcCol+1  , m_inImageDesc.m_width-1),
+                     range<TrikCvImageDimension>(0, _srcRow-adj, m_inImageDesc.m_height-1),
+                     _outImage, _r, _g, _b);
+        drawRgbPixel(range<TrikCvImageDimension>(0, _srcCol-1  , m_inImageDesc.m_width-1),
+                     range<TrikCvImageDimension>(0, _srcRow+adj, m_inImageDesc.m_height-1),
+                     _outImage, _r, _g, _b);
+        drawRgbPixel(range<TrikCvImageDimension>(0, _srcCol    , m_inImageDesc.m_width-1),
+                     range<TrikCvImageDimension>(0, _srcRow+adj, m_inImageDesc.m_height-1),
+                     _outImage, _r, _g, _b);
+        drawRgbPixel(range<TrikCvImageDimension>(0, _srcCol+1  , m_inImageDesc.m_width-1),
+                     range<TrikCvImageDimension>(0, _srcRow+adj, m_inImageDesc.m_height-1),
+                     _outImage, _r, _g, _b);
+      }
+    }
+
 
     void proceedRgbPixel(const TrikCvImageDimension _srcCol,
                          const TrikCvImageDimension _srcRow,
                          XDAS_UInt16* _rgbRow,
-                         XDAS_UInt8 _r, XDAS_UInt8 _g, XDAS_UInt8 _b)
+                         const XDAS_UInt8 _r, const XDAS_UInt8 _g, const XDAS_UInt8 _b)
     {
       if (testifyRgbPixel(_r, _g, _b))
       {
         m_targetX += _srcCol;
         m_targetY += _srcRow;
         ++m_targetPoints;
-        _r = 0xff;
-        _g = 0xff;
-        _b = 0x00;
+        writeRgbPixel(_srcCol, _rgbRow, 0xff, 0xff, 0x00);
       }
-
-      writeRgbPixel(_srcCol, _rgbRow, _r, _g, _b);
+      else
+        writeRgbPixel(_srcCol, _rgbRow, _r, _g, _b);
     }
 
 
@@ -351,6 +421,7 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
 
       if (m_targetPoints > 0)
       {
+        drawRgbTargetCross(m_targetX / m_targetPoints, m_targetY / m_targetPoints, _outImage, 0xff, 0x00, 0xff);
         _outArgs.targetX = (((m_targetX / m_targetPoints) - m_inImageDesc.m_width/2)  * 100*2) / m_inImageDesc.m_width;
         _outArgs.targetY = (((m_targetY / m_targetPoints) - m_inImageDesc.m_height/2) * 100*2) / m_inImageDesc.m_height;
       }
