@@ -19,25 +19,36 @@ typedef struct TrikCvHandle {
 
     TRIK_VIDTRANSCODE_CV_Params			m_params;
     TRIK_VIDTRANSCODE_CV_DynamicParams		m_dynamicParams;
+    void*					m_persistentData; /* Handle to C++ class */
 } TrikCvHandle;
 
+typedef TRIK_VIDTRANSCODE_CV_VideoFormat TrikCvImageFormat;
 
-typedef struct TrikCvImage {
-    XDAS_Int8* m_ptr;
-    XDAS_Int32 m_size;
-    XDAS_Int32 m_format;
-    XDAS_Int32 m_width;
-    XDAS_Int32 m_height;
-    XDAS_Int32 m_lineLength;
-} TrikCvImage;
+typedef struct TrikCvImageDesc {
+    XDAS_Int32        m_width;
+    XDAS_Int32        m_height;
+    XDAS_Int32        m_lineLength;
+    XDAS_Int32        m_format;
+} TrikCvImageDesc;
 
+typedef struct TrikCvImageBuffer {
+    XDAS_Int8*        m_ptr;
+    XDAS_Int32        m_size;
+} TrikCvImageBuffer;
+
+typedef TRIK_VIDTRANSCODE_CV_InArgsAlg  TrikCvAlgInArgs;
+
+typedef TRIK_VIDTRANSCODE_CV_OutArgsAlg TrikCvAlgOutArgs;
+
+
+XDAS_Int32 trikCvHandleInit(TrikCvHandle* _handle);
+XDAS_Int32 trikCvHandleDestroy(TrikCvHandle* _handle);
 
 XDAS_Int32 trikCvHandleSetupParams(TrikCvHandle* _handle, const TRIK_VIDTRANSCODE_CV_Params* _params);
 XDAS_Int32 trikCvHandleSetupDynamicParams(TrikCvHandle* _handle, const TRIK_VIDTRANSCODE_CV_DynamicParams* _dynamicParams);
 
-XDAS_Int32 trikCvProceedImage(const TrikCvImage* _inImage, TrikCvImage* _outImage,
-                              const TRIK_VIDTRANSCODE_CV_InArgsAlg* _inArgs,
-                              TRIK_VIDTRANSCODE_CV_OutArgsAlg* _outArgs);
+XDAS_Int32 trikCvProceedImage(const TrikCvImageBuffer* _inImage, TrikCvImageBuffer* _outImage,
+                              const TrikCvAlgInArgs* _inArgs, TrikCvAlgOutArgs* _outArgs);
 
 
 #ifdef __cplusplus

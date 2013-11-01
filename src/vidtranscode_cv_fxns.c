@@ -113,6 +113,8 @@ Int TRIK_VIDTRANSCODE_CV_free(
 {
     TrikCvHandle* handle = (TrikCvHandle*)_algHandle;
 
+    trikCvHandleDestroy(handle);
+
     /* Returned data must match one returned in alloc */
     _algMemTab[0].base		= handle;
     _algMemTab[0].size		= sizeof(TrikCvHandle);
@@ -141,6 +143,8 @@ Int TRIK_VIDTRANSCODE_CV_initObj(
     TrikCvHandle* handle = (TrikCvHandle*)_algHandle;
     XDAS_Int32 res;
 
+    if ((res = trikCvHandleInit(handle)) != IALG_EOK)
+        return res;
     if ((res = trikCvHandleSetupParams(handle, (TRIK_VIDTRANSCODE_CV_Params*)_algParams)) != IALG_EOK)
         return res;
     if ((res = trikCvHandleSetupDynamicParams(handle, NULL)) != IALG_EOK)
@@ -168,8 +172,8 @@ XDAS_Int32 TRIK_VIDTRANSCODE_CV_process(
 
     XDM1_SingleBufDesc* xdmInBuf;
     XDM1_SingleBufDesc* xdmOutBuf;
-    TrikCvImage inImage;
-    TrikCvImage outImage;
+    TrikCvImageBuffer inImage;
+    TrikCvImageBuffer outImage;
 
     XDAS_Int32 res;
 
@@ -181,9 +185,7 @@ XDAS_Int32 TRIK_VIDTRANSCODE_CV_process(
     }
 
     if (   _xdmInBufs->numBufs != 1
-        || handle->m_params.base.numOutputStreams < 0
-        || handle->m_params.base.numOutputStreams > 1
-        || handle->m_params.base.numOutputStreams > _xdmOutBufs->numBufs)
+        || _xdmOutBufs->numBufs < handle->m_params.base.numOutputStreams)
     {
         XDM_SETUNSUPPORTEDPARAM(vidOutArgs->base.extendedError);
         return IVIDTRANSCODE_EFAIL;
@@ -208,11 +210,6 @@ XDAS_Int32 TRIK_VIDTRANSCODE_CV_process(
 
     inImage.m_ptr		= xdmInBuf->buf;
     inImage.m_size		= vidInArgs->base.numBytes;
-    inImage.m_format		= handle->m_params.base.formatInput;
-    inImage.m_width		= handle->m_dynamicParams.inputWidth;
-    inImage.m_height		= handle->m_dynamicParams.inputHeight;
-    inImage.m_lineLength	= handle->m_dynamicParams.inputLineLength;
-
 
     if (handle->m_params.base.numOutputStreams == 1)
     {
@@ -220,22 +217,14 @@ XDAS_Int32 TRIK_VIDTRANSCODE_CV_process(
         xdmOutBuf->buf			= _xdmOutBufs->bufs[0];
         xdmOutBuf->bufSize		= _xdmOutBufs->bufSizes[0];
         xdmOutBuf->accessMask		= 0;
-        outImage.m_ptr			= xdmInBuf->buf;
-        outImage.m_size			= xdmInBuf->bufSize;
-        outImage.m_format		= handle->m_params.base.formatOutput[0];
-        outImage.m_width		= handle->m_dynamicParams.base.outputWidth[0];
-        outImage.m_height		= handle->m_dynamicParams.base.outputHeight[0];
-        outImage.m_lineLength		= handle->m_dynamicParams.outputLineLength[0];
+        outImage.m_ptr			= xdmOutBuf->buf;
+        outImage.m_size			= xdmOutBuf->bufSize;
     }
     else
     {
         xdmOutBuf			= NULL;
         outImage.m_ptr			= NULL;
         outImage.m_size			= 0;
-        outImage.m_format		= TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_UNKNOWN;
-        outImage.m_width		= 0;
-        outImage.m_height		= 0;
-        outImage.m_lineLength		= 0;
     }
 
     if ((res = trikCvProceedImage(&inImage, &outImage, &vidInArgs->alg, &vidOutArgs->alg)) != IVIDTRANSCODE_EOK)
