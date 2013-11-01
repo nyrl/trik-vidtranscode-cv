@@ -157,21 +157,20 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
 #endif
 
       const XDAS_UInt16 hsv_v = max;
+      const bool hsv_v_det = (m_detectValFrom <= hsv_v) && (m_detectValTo >= hsv_v);
 
       /* optimized by table based multiplication with power-2 divisor, simulate 255*(max-min)/max */
       const XDAS_UInt16 hsv_s = (static_cast<XDAS_UInt16>(m_mult255_div[max]) * static_cast<XDAS_UInt16>(max-min)) >> 8;
+      const bool hsv_s_det = (m_detectSatFrom <= hsv_s) && (m_detectSatTo >= hsv_s);
 
       /* optimized by table based multiplication with power-2 divisor, simulate 43*(med-min)/(max-min) */
       const XDAS_UInt16 hsv_incr = (static_cast<XDAS_UInt16>(m_mult43_div[max-min]) * static_cast<XDAS_UInt16>(med-min)) >> 8;
       const XDAS_UInt16 hsv_h = hsv_is_incr ? hsv_base + hsv_incr : hsv_base - hsv_incr;
+      const bool hsv_h_det = (m_detectHueFrom <= m_detectHueTo)
+                           ? (m_detectHueFrom <= hsv_h) && (m_detectHueTo >= hsv_h)
+                           : (m_detectHueFrom <= hsv_h) || (m_detectHueTo >= hsv_h);
 
-      if (   hsv_v >= m_detectValFrom && hsv_v <= m_detectValTo
-          && hsv_s >= m_detectSatFrom && hsv_s <= m_detectSatTo
-          && (   (m_detectHueFrom <= m_detectHueTo &&  hsv_h >= m_detectHueFrom && hsv_h <= m_detectHueTo)
-              || (m_detectHueFrom >  m_detectHueTo && (hsv_h >= m_detectHueFrom || hsv_h <= m_detectHueTo))))
-        return true;
-
-      return false;
+      return hsv_h_det && hsv_v_det && hsv_s_det;
     }
 
     void writeRgbPixel(TrikCvImageDimension _srcCol,
@@ -193,7 +192,6 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
         m_targetX += _srcCol;
         m_targetY += _srcRow;
         ++m_targetPoints;
-
         _r = 0xff;
         _g = 0xff;
         _b = 0x00;
@@ -319,12 +317,12 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
       if (m_outImageDesc.m_height * m_outImageDesc.m_lineLength > _outImage.m_size)
         return false;
 
-      m_detectHueFrom = (_inArgs.detectHueFrom * 255) / 359; // scaling 0..359 to 0..255
-      m_detectHueTo   = (_inArgs.detectHueTo   * 255) / 359; // scaling 0..359 to 0..255
-      m_detectSatFrom = (_inArgs.detectSatFrom * 255) / 100; // scaling 0..100 to 0..255
-      m_detectSatTo   = (_inArgs.detectSatTo   * 255) / 100; // scaling 0..100 to 0..255
-      m_detectValFrom = (_inArgs.detectSatFrom * 255) / 100; // scaling 0..100 to 0..255
-      m_detectValTo   = (_inArgs.detectSatTo   * 255) / 100; // scaling 0..100 to 0..255
+      m_detectHueFrom = range<XDAS_Int16>(0, (_inArgs.detectHueFrom * 255) / 359, 255); // scaling 0..359 to 0..255
+      m_detectHueTo   = range<XDAS_Int16>(0, (_inArgs.detectHueTo   * 255) / 359, 255); // scaling 0..359 to 0..255
+      m_detectSatFrom = range<XDAS_Int16>(0, (_inArgs.detectSatFrom * 255) / 100, 255); // scaling 0..100 to 0..255
+      m_detectSatTo   = range<XDAS_Int16>(0, (_inArgs.detectSatTo   * 255) / 100, 255); // scaling 0..100 to 0..255
+      m_detectValFrom = range<XDAS_Int16>(0, (_inArgs.detectValFrom * 255) / 100, 255); // scaling 0..100 to 0..255
+      m_detectValTo   = range<XDAS_Int16>(0, (_inArgs.detectValTo   * 255) / 100, 255); // scaling 0..100 to 0..255
       m_targetX = 0;
       m_targetY = 0;
       m_targetPoints = 0;
