@@ -6,45 +6,14 @@
 #include <xdc/runtime/Diags.h>
 #include <xdc/runtime/Log.h>
 
-
-
-
-#if 1
-namespace trik
-{
-  class CVAlgorithm
-  {
-    public:
-      virtual bool setup(const TrikCvImageDesc& _inImageDesc, const TrikCvImageDesc& _outImageDesc) = 0;
-      virtual bool run(const TrikCvImageBuffer& _inImage, TrikCvImageBuffer& _outImage,
-                       const TrikCvAlgInArgs& _inArgs, TrikCvAlgOutArgs& _outArgs) = 0;
-  };
-
-  template <TrikCvImageFormat _inFormat, TrikCvImageFormat _outFormat>
-  class CVBallDetector : public CVAlgorithm
-  {
-    public:
-      CVBallDetector() {};
-
-      virtual bool setup(const TrikCvImageDesc& _inImageDesc, const TrikCvImageDesc& _outImageDesc) { return false; }
-      virtual bool run(const TrikCvImageBuffer& _inImage, TrikCvImageBuffer& _outImage,
-                       const TrikCvAlgInArgs& _inArgs, TrikCvAlgOutArgs& _outArgs) { return false; }
-  };
-};
-#endif
-
+#include "internal/cv_algorithm.hpp"
+#include "internal/cv_ball_detector.hpp"
 
 
 
 struct TrikCvPersistentData
 {
-  TrikCvPersistentData() {}
-  ~TrikCvPersistentData() {}
-
-  TrikCvImageDesc m_inImageDesc;
-  TrikCvImageDesc m_outImageDesc;
-
-  std::auto_ptr<trik::CVAlgorithm> m_cvAlgorithm;
+  std::auto_ptr<trik::cv::CVAlgorithm> m_cvAlgorithm;
 };
 
 
@@ -81,10 +50,12 @@ static TrikCvPersistentData& getHandlePersistentData(TrikCvHandle* _handle)
 
 
 template <typename _CVAlgorithm>
-XDAS_Int32 createCVAlgorithm(TrikCvPersistentData& _pd)
+XDAS_Int32 createCVAlgorithm(TrikCvPersistentData& _pd,
+                             const TrikCvImageDesc& _inImageDesc,
+                             const TrikCvImageDesc& _outImageDesc)
 {
   _pd.m_cvAlgorithm.reset(new _CVAlgorithm());
-  if (!_pd.m_cvAlgorithm->setup(_pd.m_inImageDesc, _pd.m_outImageDesc))
+  if (!_pd.m_cvAlgorithm->setup(_inImageDesc, _outImageDesc))
   {
     Log_error0("CV algorithm setup failed");
     return IALG_EFAIL;
@@ -96,14 +67,15 @@ XDAS_Int32 createCVAlgorithm(TrikCvPersistentData& _pd)
 
 
 
-XDAS_Int32 handleSetupImageDescCreateCVAlgorithm(TrikCvPersistentData& _pd)
+XDAS_Int32 handleSetupImageDescCreateCVAlgorithm(TrikCvPersistentData& _pd,
+                                                 const TrikCvImageDesc& _inImageDesc,
+                                                 const TrikCvImageDesc& _outImageDesc)
 {
 #define IF_IN_OUT_FORMAT(_CVAlgorithm, _inFormat, _outFormat) \
-  if (_pd.m_inImageDesc.m_format == _inFormat && _pd.m_outImageDesc.m_format == _outFormat) \
-    return createCVAlgorithm<_CVAlgorithm<_inFormat, _outFormat> >(_pd)
+  if (_inImageDesc.m_format == _inFormat && _outImageDesc.m_format == _outFormat) \
+    return createCVAlgorithm<_CVAlgorithm<_inFormat, _outFormat> >(_pd, _inImageDesc, _outImageDesc)
 
-  IF_IN_OUT_FORMAT(trik::CVBallDetector, TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_RGB565X);
-  IF_IN_OUT_FORMAT(trik::CVBallDetector, TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_RGB888, TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_RGB565X);
+  IF_IN_OUT_FORMAT(trik::cv::BallDetector, TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_RGB565X);
 
 #undef IF_IN_OUT_FORMAT
 
@@ -126,38 +98,41 @@ static XDAS_Int32 handleSetupImageDesc(TrikCvHandle* _handle)
     return IALG_EFAIL;
   }
 
-  pd.m_inImageDesc.m_format	= _handle->m_params.base.formatInput;
-  pd.m_inImageDesc.m_width	= _handle->m_dynamicParams.inputWidth;
-  pd.m_inImageDesc.m_height	= _handle->m_dynamicParams.inputHeight;
-  pd.m_inImageDesc.m_lineLength	= _handle->m_dynamicParams.inputLineLength;
+  TrikCvImageDesc inImageDesc;
+  TrikCvImageDesc outImageDesc;
+
+  inImageDesc.m_format		= static_cast<TrikCvImageFormat>(_handle->m_params.base.formatInput);
+  inImageDesc.m_width		= _handle->m_dynamicParams.inputWidth;
+  inImageDesc.m_height		= _handle->m_dynamicParams.inputHeight;
+  inImageDesc.m_lineLength	= _handle->m_dynamicParams.inputLineLength;
 
   if (_handle->m_params.base.numOutputStreams == 1)
   {
-    pd.m_outImageDesc.m_format		= _handle->m_params.base.formatOutput[0];
-    pd.m_outImageDesc.m_width		= _handle->m_dynamicParams.base.outputWidth[0];
-    pd.m_outImageDesc.m_height		= _handle->m_dynamicParams.base.outputHeight[0];
-    pd.m_outImageDesc.m_lineLength	= _handle->m_dynamicParams.outputLineLength[0];
+    outImageDesc.m_format	= static_cast<TrikCvImageFormat>(_handle->m_params.base.formatOutput[0]);
+    outImageDesc.m_width	= _handle->m_dynamicParams.base.outputWidth[0];
+    outImageDesc.m_height	= _handle->m_dynamicParams.base.outputHeight[0];
+    outImageDesc.m_lineLength	= _handle->m_dynamicParams.outputLineLength[0];
   }
   else
   {
-    pd.m_outImageDesc.m_format		= TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_UNKNOWN;
-    pd.m_outImageDesc.m_width		= 0;
-    pd.m_outImageDesc.m_height		= 0;
-    pd.m_outImageDesc.m_lineLength	= 0;
+    outImageDesc.m_format	= TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_UNKNOWN;
+    outImageDesc.m_width	= 0;
+    outImageDesc.m_height	= 0;
+    outImageDesc.m_lineLength	= 0;
   }
 
-  if (   (pd.m_inImageDesc.m_width   < 0 || pd.m_inImageDesc.m_width   > _handle->m_params.base.maxWidthInput)
-      || (pd.m_inImageDesc.m_height  < 0 || pd.m_inImageDesc.m_height  > _handle->m_params.base.maxHeightInput)
-      || (pd.m_outImageDesc.m_width  < 0 || pd.m_outImageDesc.m_width  > _handle->m_params.base.maxWidthOutput[0])
-      || (pd.m_outImageDesc.m_height < 0 || pd.m_outImageDesc.m_height > _handle->m_params.base.maxHeightOutput[0]))
+  if (   (inImageDesc.m_width   < 0 || inImageDesc.m_width   > _handle->m_params.base.maxWidthInput)
+      || (inImageDesc.m_height  < 0 || inImageDesc.m_height  > _handle->m_params.base.maxHeightInput)
+      || (outImageDesc.m_width  < 0 || outImageDesc.m_width  > _handle->m_params.base.maxWidthOutput[0])
+      || (outImageDesc.m_height < 0 || outImageDesc.m_height > _handle->m_params.base.maxHeightOutput[0]))
   {
     Log_error4("Invalid image dimensions: %dx%d -> %dx%d",
-               pd.m_inImageDesc.m_width,  pd.m_inImageDesc.m_height,
-               pd.m_outImageDesc.m_width, pd.m_outImageDesc.m_height);
+               inImageDesc.m_width,  inImageDesc.m_height,
+               outImageDesc.m_width, outImageDesc.m_height);
     return IALG_EFAIL;
   }
 
-  if ((res = handleSetupImageDescCreateCVAlgorithm(pd)) != IALG_EOK)
+  if ((res = handleSetupImageDescCreateCVAlgorithm(pd, inImageDesc, outImageDesc)) != IALG_EOK)
   {
     Log_error0("Cannot create CV algorithm");
     return res;

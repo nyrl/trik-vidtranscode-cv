@@ -23,17 +23,20 @@ typedef struct TrikCvHandle {
 } TrikCvHandle;
 
 typedef TRIK_VIDTRANSCODE_CV_VideoFormat TrikCvImageFormat;
+typedef XDAS_Int8* TrikCvImagePtr;
+typedef XDAS_Int16 TrikCvImageDimension;
+typedef XDAS_Int32 TrikCvImageSize;
 
 typedef struct TrikCvImageDesc {
-    XDAS_Int32        m_width;
-    XDAS_Int32        m_height;
-    XDAS_Int32        m_lineLength;
-    XDAS_Int32        m_format;
+    TrikCvImageDimension m_width;
+    TrikCvImageDimension m_height;
+    TrikCvImageSize      m_lineLength;
+    TrikCvImageFormat    m_format;
 } TrikCvImageDesc;
 
 typedef struct TrikCvImageBuffer {
-    XDAS_Int8*        m_ptr;
-    XDAS_Int32        m_size;
+    TrikCvImagePtr       m_ptr;
+    TrikCvImageSize      m_size;
 } TrikCvImageBuffer;
 
 typedef TRIK_VIDTRANSCODE_CV_InArgsAlg  TrikCvAlgInArgs;
