@@ -137,8 +137,7 @@ static XDAS_Int32 handleSetupImageDesc(TrikCvHandle* _handle)
     return res;
   }
 
-  Log_info0("Image description setup");
-
+  Log_info0("Image description setup succeed");
   return IALG_EOK;
 }
 
@@ -180,6 +179,7 @@ XDAS_Int32 trikCvHandleSetupParams(TrikCvHandle* _handle,
       XDM_BYTE						/* dataEndianness = byte only */
     }
   };
+  XDAS_Int32 res;
 
   assert(_handle);
 
@@ -190,6 +190,7 @@ XDAS_Int32 trikCvHandleSetupParams(TrikCvHandle* _handle,
 
 #warning Actually check params and return IALG_EOK / IALG_EFAIL
 
+  Log_info0("Params accepted");
   return IALG_EOK;
 }
 
@@ -261,6 +262,7 @@ XDAS_Int32 trikCvHandleSetupDynamicParams(TrikCvHandle* _handle,
       -1,							/* outputLineLength - default, to be calculated base on width */
     }
   };
+  XDAS_Int32 res;
 
   assert(_handle);
 
@@ -271,7 +273,14 @@ XDAS_Int32 trikCvHandleSetupDynamicParams(TrikCvHandle* _handle,
 
 #warning Actually check dynamic params and return IALG_EOK / IALG_EFAIL
 
-  return handleSetupImageDesc(_handle);
+  if ((res = handleSetupImageDesc(_handle)) != IALG_EOK)
+  {
+    Log_error0("Image description setup failed");
+    return res;
+  }
+
+  Log_info0("Dynamic params accepted");
+  return IALG_EOK;
 }
 
 
