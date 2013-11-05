@@ -382,124 +382,35 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
                                                              const TrikCvImageDimension _srcRow,
                                                              XDAS_UInt16* _rgbRow)
     {
+      const uint32_t u32_yuyv   = _yuyv;
+      const int64_t  s64_yuyv1  = _mpyu4ll(u32_yuyv,
+                                            (static_cast<uint32_t>(static_cast<uint8_t>(409/4))<<24)
+                                           |(static_cast<uint32_t>(static_cast<uint8_t>(298/4))<<16)
+                                           |(static_cast<uint32_t>(static_cast<uint8_t>(516/4))<< 8)
+                                           |(static_cast<uint32_t>(static_cast<uint8_t>(298/4))    ));
+      const int64_t  s64_yuyv2a = _mpyus4ll(u32_yuyv,
+                                             (static_cast<uint32_t>(static_cast<uint8_t>(-208/4))<<24)
+                                            |(static_cast<uint32_t>(static_cast<uint8_t>(-100/4))<< 8));
+      const int32_t  s32_yuyv2b = _add2(_hill(s64_yuyv2a), _loll(s64_yuyv2a));
+      const int64_t  s64_rgb1a  = _itoll(_packlh2(s32_yuyv2b/*0*/, _hill(s64_yuyv1)),
+                                         _packh2( s32_yuyv2b,      _loll(s64_yuyv1)));
+      const int64_t  s64_rgb1b  = _itoll(_add2(_hill(s64_rgb1a),
+                                               (static_cast<uint32_t>(static_cast<uint16_t>(128/4 + (-128*409-16*298)/4)))),
+                                         _add2(_loll(s64_rgb1a),
+                                                (static_cast<uint32_t>(static_cast<uint16_t>(128/4 + (+128*100+128*208-16*298)/4)<<16))
+                                               |(static_cast<uint32_t>(static_cast<uint16_t>(128/4 + (-128*516-16*298)/4)))));
+      const int32_t  s32_y1y1   = _pack2(_loll(s64_yuyv1), _loll(s64_yuyv1));
+      const int32_t  s32_y2y2   = _pack2(_hill(s64_yuyv1), _hill(s64_yuyv1));
+      const int32_t  s32_rgb21h = _shr2(_add2(_hill(s64_rgb1b), s32_y1y1), 6);
+      const int32_t  s32_rgb21l = _shr2(_add2(_loll(s64_rgb1b), s32_y1y1), 6);
+      const int32_t  s32_rgb22h = _shr2(_add2(_hill(s64_rgb1b), s32_y2y2), 6);
+      const int32_t  s32_rgb22l = _shr2(_add2(_loll(s64_rgb1b), s32_y2y2), 6);
+      const uint32_t u32_rgb_p1 = _clr(_spacku4(s32_rgb21h, s32_rgb21l), 24, 31);
+      const uint32_t u32_rgb_p2 = _clr(_spacku4(s32_rgb22h, s32_rgb22l), 24, 31);
 
-      struct packs16
-      {
-        static packs16 s16(int16_t _s16) { packs16 res; res.v.s16 = _s16; return res; }
-        static packs16 s8x2(int8_t _s8h, int8_t _s8l) { packs16 res; res.v.p16.h = _s8h; res.v.p16.l = _s8l; return res; }
+      FAST_proceedRgbPixel(_srcCol+0, _srcRow, _rgbRow, u32_rgb_p1);
 
-        union {
-          struct {
-            int8_t l;
-            int8_t h;
-          } p16;
-          int16_t s16;
-        } v;
-      };
-
-      struct packu16
-      {
-        static packu16 u16(uint16_t _u16) { packu16 res; res.v.u16 = _u16; return res; }
-        static packu16 u8x2(uint8_t _u8h, uint8_t _u8l) { packu16 res; res.v.p16.h = _u8h; res.v.p16.l = _u8l; return res; }
-
-        union {
-          struct {
-            uint8_t l;
-            uint8_t h;
-          } p16;
-          uint16_t u16;
-        } v;
-      };
-
-      struct packs32
-      {
-        static packs32 s32(int32_t _s32) { packs32 res; res.v.s32 = _s32; return res; }
-        static packs32 s16x2(int16_t _s16h, int16_t _s16l) { packs32 res; res.v.p32.h.v.s16 = _s16h; res.v.p32.l.v.s16 = _s16l; return res; }
-        static packs32 s8x4(int8_t _s8hh, int8_t _s8hl, int8_t _s8lh, int8_t _s8ll) { packs32 res; res.v.p32.h.v.p16.h = _s8hh; res.v.p32.h.v.p16.l = _s8hl; res.v.p32.l.v.p16.h = _s8lh; res.v.p32.l.v.p16.l = _s8ll; return res; }
-
-        union {
-          struct {
-            packs16 l;
-            packs16 h;
-          } p32;
-          int32_t s32;
-        } v;
-      };
-
-      struct packu32
-      {
-        static packu32 u32(uint32_t _u32) { packu32 res; res.v.u32 = _u32; return res; }
-        static packu32 u16x2(uint16_t _u16h, uint16_t _u16l) { packu32 res; res.v.p32.h.v.u16 = _u16h; res.v.p32.l.v.u16 = _u16l; return res; }
-        static packu32 u8x4(uint8_t _u8hh, uint8_t _u8hl, uint8_t _u8lh, uint8_t _u8ll) { packu32 res; res.v.p32.h.v.p16.h = _u8hh; res.v.p32.h.v.p16.l = _u8hl; res.v.p32.l.v.p16.h = _u8lh; res.v.p32.l.v.p16.l = _u8ll; return res; }
-
-        union {
-          struct {
-            packu16 l;
-            packu16 h;
-          } p32;
-          uint32_t u32;
-        } v;
-      };
-
-      struct packs64
-      {
-        static packs64 s64(int64_t _s64) { packs64 res; res.v.s64 = _s64; return res; }
-        static packs64 s32x2(int32_t _s32h, int32_t _s32l) { packs64 res; res.v.p64.h.v.s32 = _s32h; res.v.p64.l.v.s32 = _s32l; return res; }
-        static packs64 s16x4(int16_t _s16hh, int16_t _s16hl, int16_t _s16lh, int16_t _s16ll) { packs64 res; res.v.p64.h.v.p32.h.v.s16 = _s16hh; res.v.p64.h.v.p32.l.v.s16 = _s16hl; res.v.p64.l.v.p32.h.v.s16 = _s16lh; res.v.p64.l.v.p32.l.v.s16 = _s16ll; return res; }
-
-        union {
-          struct {
-            packs32 l;
-            packs32 h;
-          } p64;
-          int64_t s64;
-        } v;
-      };
-
-
-      const packu32 pu32_yuyv   = packu32::u32(_yuyv);
-      const packs64 ps64_yuyv1  = packs64::s64(_mpyu4ll(pu32_yuyv.v.u32,
-                                                        //packu32::u8x4(409/4, 298/4, 516/4, 298/4).v.u32));
-                                                         (static_cast<uint32_t>(409/4)<<24)
-                                                        |(static_cast<uint32_t>(298/4)<<16)
-                                                        |(static_cast<uint32_t>(516/4)<< 8)
-                                                        |(static_cast<uint32_t>(298/4)    )));
-      const packs64 ps64_yuyv2a = packs64::s64(_mpyus4ll(pu32_yuyv.v.u32,
-                                                         //packs32::s8x4(-208/4, 0, -100/4, 0).v.s32));
-                                                         (static_cast<uint32_t>(static_cast<uint8_t>(-208/4))<<24)
-                                                         |(static_cast<uint32_t>(static_cast<uint8_t>(-100/4))<< 8)));
-      const packs32 ps32_yuyv2b = packs32::s32(_add2(ps64_yuyv2a.v.p64.h.v.s32, ps64_yuyv2a.v.p64.l.v.s32));
-      //const packs64 ps64_rgb1a  = packs64::s16x4(0, ps64_yuyv1.v.p64.h.v.p32.h.v.s16, ps32_yuyv2b.v.p32.h.v.s16, ps64_yuyv1.v.p64.l.v.p32.h.v.s16);
-      const packs64 ps64_rgb1a  = packs64::s32x2(_packlh2(ps32_yuyv2b.v.s32, ps64_yuyv1.v.p64.h.v.s32),
-                                                 _packh2( ps32_yuyv2b.v.s32, ps64_yuyv1.v.p64.l.v.s32));
-      const packs64 ps64_rgb1b  = packs64::s32x2(_add2(ps64_rgb1a.v.p64.h.v.s32,
-                                                       //packs32::s16x2(0, 128/4 + (-128*409-16*298)/4).v.s32),
-                                                       (static_cast<uint32_t>(static_cast<uint16_t>(128/4 + (-128*409-16*298)/4)))),
-                                                 _add2(ps64_rgb1a.v.p64.l.v.s32,
-                                                       //packs32::s16x2(128/4 + (+128*100+128*208-16*298)/4, 128/4 + (-128*516-16*298)/4).v.s32));
-                                                        (static_cast<uint32_t>(static_cast<uint16_t>(128/4 + (+128*100+128*208-16*298)/4)<<16))
-                                                       |(static_cast<uint32_t>(static_cast<uint16_t>(128/4 + (-128*516-16*298)/4)))));
-
-      //const packs64 ps64_y1     = packs64::s16x4(0, ps64_yuyv1.v.p64.l.v.p32.l.v.s16, ps64_yuyv1.v.p64.l.v.p32.l.v.s16, ps64_yuyv1.v.p64.l.v.p32.l.v.s16);
-      const packs64 ps64_y1     = packs64::s32x2(ps64_yuyv1.v.p64.l.v.p32.l.v.s16,
-                                                 _pack2(ps64_yuyv1.v.p64.l.v.s32, ps64_yuyv1.v.p64.l.v.s32));
-      //const packs64 ps64_y2     = packs64::s16x4(0, ps64_yuyv1.v.p64.h.v.p32.l.v.s16, ps64_yuyv1.v.p64.h.v.p32.l.v.s16, ps64_yuyv1.v.p64.h.v.p32.l.v.s16);
-      const packs64 ps64_y2     = packs64::s32x2(ps64_yuyv1.v.p64.h.v.p32.l.v.s16,
-                                                 _pack2(ps64_yuyv1.v.p64.h.v.s32, ps64_yuyv1.v.p64.h.v.s32));
-      const packs32 ps32_rgb21h = packs32::s32(_add2(ps64_rgb1b.v.p64.h.v.s32, ps64_y1.v.p64.h.v.s32));
-      const packs32 ps32_rgb21l = packs32::s32(_add2(ps64_rgb1b.v.p64.l.v.s32, ps64_y1.v.p64.l.v.s32));
-      const packs64 ps64_rgb21  = packs64::s32x2(_shr2(ps32_rgb21h.v.s32, 6),
-                                                 _shr2(ps32_rgb21l.v.s32, 6));
-      const packs32 ps32_rgb22h = packs32::s32(_add2(ps64_rgb1b.v.p64.h.v.s32, ps64_y2.v.p64.h.v.s32));
-      const packs32 ps32_rgb22l = packs32::s32(_add2(ps64_rgb1b.v.p64.l.v.s32, ps64_y2.v.p64.l.v.s32));
-      const packs64 ps64_rgb22  = packs64::s32x2(_shr2(ps32_rgb22h.v.s32, 6),
-                                                 _shr2(ps32_rgb22l.v.s32, 6));
-      const packu32 pu32_rgb_p1 = packu32::u32(_spacku4(ps64_rgb21.v.p64.h.v.s32, ps64_rgb21.v.p64.l.v.s32));
-      const packu32 pu32_rgb_p2 = packu32::u32(_spacku4(ps64_rgb22.v.p64.h.v.s32, ps64_rgb22.v.p64.l.v.s32));
-
-      FAST_proceedRgbPixel(_srcCol+0, _srcRow, _rgbRow, pu32_rgb_p1.v.u32);
-
-      FAST_proceedRgbPixel(_srcCol+1, _srcRow, _rgbRow, pu32_rgb_p2.v.u32);
+      FAST_proceedRgbPixel(_srcCol+1, _srcRow, _rgbRow, u32_rgb_p2);
     }
 
 
