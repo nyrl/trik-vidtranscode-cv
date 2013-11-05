@@ -481,21 +481,21 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
                                              (static_cast<uint32_t>(static_cast<uint8_t>(-208/4))<<24)
                                             |(static_cast<uint32_t>(static_cast<uint8_t>(-100/4))<< 8));
       const int32_t  s32_yuyv2b = _add2(_hill(s64_yuyv2a), _loll(s64_yuyv2a));
-      const int64_t  s64_rgb1a  = _itoll(_packlh2(s32_yuyv2b/*0*/, _hill(s64_yuyv1)),
-                                         _packh2( s32_yuyv2b,      _loll(s64_yuyv1)));
-      const int64_t  s64_rgb1b  = _itoll(_add2(_hill(s64_rgb1a),
-                                               (static_cast<uint32_t>(static_cast<uint16_t>(128/4 + (-128*409-16*298)/4)))),
-                                         _add2(_loll(s64_rgb1a),
-                                                (static_cast<uint32_t>(static_cast<uint16_t>(128/4 + (+128*100+128*208-16*298)/4)<<16))
-                                               |(static_cast<uint32_t>(static_cast<uint16_t>(128/4 + (-128*516-16*298)/4)))));
-      const int32_t  s32_y1y1   = _pack2(_loll(s64_yuyv1), _loll(s64_yuyv1));
-      const int32_t  s32_y2y2   = _pack2(_hill(s64_yuyv1), _hill(s64_yuyv1));
-      const int32_t  s32_rgb21h = _shr2(_add2(_hill(s64_rgb1b), s32_y1y1), 6);
-      const int32_t  s32_rgb21l = _shr2(_add2(_loll(s64_rgb1b), s32_y1y1), 6);
-      const int32_t  s32_rgb22h = _shr2(_add2(_hill(s64_rgb1b), s32_y2y2), 6);
-      const int32_t  s32_rgb22l = _shr2(_add2(_loll(s64_rgb1b), s32_y2y2), 6);
-      const uint32_t u32_rgb_p1 = _clr(_spacku4(s32_rgb21h, s32_rgb21l), 24, 31);
-      const uint32_t u32_rgb_p2 = _clr(_spacku4(s32_rgb22h, s32_rgb22l), 24, 31);
+      const uint32_t u32_rgb_h1 = _packlh2(s32_yuyv2b/*0*/, _hill(s64_yuyv1));
+      const uint32_t u32_rgb_l1 = _packh2( s32_yuyv2b,      _loll(s64_yuyv1));
+      const uint32_t u32_rgb_h2 = _add2(u32_rgb_h1,
+                                        (static_cast<uint32_t>(static_cast<uint16_t>(128/4 + (-128*409-16*298)/4))));
+      const uint32_t u32_rgb_l2 = _add2(u32_rgb_l1,
+                                         (static_cast<uint32_t>(static_cast<uint16_t>(128/4 + (+128*100+128*208-16*298)/4)<<16))
+                                        |(static_cast<uint32_t>(static_cast<uint16_t>(128/4 + (-128*516-16*298)/4))));
+      const uint32_t u32_y1y1   = _pack2(_loll(s64_yuyv1), _loll(s64_yuyv1));
+      const uint32_t u32_y2y2   = _pack2(_hill(s64_yuyv1), _hill(s64_yuyv1));
+      const uint32_t u32_rgb21h = _clr(_shr2(_add2(u32_rgb_h2, u32_y1y1), 6), 16, 31);
+      const uint32_t u32_rgb21l =      _shr2(_add2(u32_rgb_l2, u32_y1y1), 6);
+      const uint32_t u32_rgb22h = _clr(_shr2(_add2(u32_rgb_h2, u32_y2y2), 6), 16, 31);
+      const uint32_t u32_rgb22l =      _shr2(_add2(u32_rgb_l2, u32_y2y2), 6);
+      const uint32_t u32_rgb_p1 = _spacku4(u32_rgb21h, u32_rgb21l);
+      const uint32_t u32_rgb_p2 = _spacku4(u32_rgb22h, u32_rgb22l);
 
       FAST_proceedRgbPixel(_srcCol+0, _srcRow, _rgbRow, u32_rgb_p1);
 
