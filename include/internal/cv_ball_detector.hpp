@@ -59,6 +59,10 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
     XDAS_Int32  m_targetY;
     XDAS_UInt32 m_targetPoints;
 
+    uint32_t m_FAST_detectFrom;
+    uint32_t m_FAST_detectTo;
+    uint32_t m_FAST_detectExpected;
+
     bool testifyRgbPixel(const XDAS_UInt8 _r, const XDAS_UInt8 _g, const XDAS_UInt8 _b)
     {
       XDAS_UInt8 max;
@@ -173,10 +177,236 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
       return hsv_h_det && hsv_v_det && hsv_s_det;
     }
 
-    bool FAST_testifyRgbPixel(const uint32_t _rgb888)
+    bool FAST_testifyRgbPixel(const uint32_t _rgb888, uint32_t& _out_rgb888)
     {
-#warning TODO
-      return testifyRgbPixel((_rgb888>>16)&0xff, (_rgb888>>8)&0xff, (_rgb888)&0xff);
+      const uint32_t u32_rgbr = _shlmb(_swap4(_rgb888), _rgb888);
+      const uint32_t u32_or16 = _unpkhu4(_rgb888);
+      const uint32_t u32_gb16 = _unpklu4(_rgb888);
+      uint32_t u32_hsv_max_hue1;
+      uint32_t u32_hsv_min_hue2;
+      int32_t  s32_hsv_hue_base;
+
+#if 1
+      XDAS_UInt8 max;
+      XDAS_UInt8 med;
+      XDAS_UInt8 min;
+      XDAS_UInt16 hsv2_base;
+      bool        hsv2_is_incr;
+      const XDAS_UInt8 r = (_rgb888>>16)&0xff;
+      const XDAS_UInt8 g = (_rgb888>> 8)&0xff;
+      const XDAS_UInt8 b = (_rgb888    )&0xff;
+#endif
+
+      const uint32_t u32_cmp  = _cmpgtu4(_rgb888, u32_rgbr); // 0?r, r?g, g?b, b?r
+      switch (u32_cmp)
+      {
+        case 0: // r<=g, g<=b, b<=r => r==g==b
+          u32_hsv_max_hue1 = _pack2  (u32_gb16, u32_gb16); // any
+          u32_hsv_min_hue2 = u32_hsv_max_hue1;             // any
+          s32_hsv_hue_base = 0;
+          if (r != g || r != b) { _out_rgb888 = 0xff0000; return false; }
+          max = r; med = r; min = r; hsv2_base = 0; hsv2_is_incr = true;
+          break;
+        case 1: // r<=g, g<=b, b>r  => b>=g>=r
+          u32_hsv_max_hue1 = _pack2  (u32_gb16, u32_or16); // b, r
+          u32_hsv_min_hue2 = _packlh2(u32_or16, u32_gb16); // r, g
+          s32_hsv_hue_base = (0x10000*2)/3;
+          if (b < g || g < r) { _out_rgb888 = 0xff0000; return false; }
+          max = b; med = g; min = r; hsv2_base = 170; hsv2_is_incr = false;
+          break;
+        case 2: // r<=g, g>b,  b<=r => g>=r>=b
+          u32_hsv_max_hue1 = _packhl2(u32_gb16, u32_gb16); // g, b
+          u32_hsv_min_hue2 = _pack2  (u32_gb16, u32_or16); // b, r
+          s32_hsv_hue_base = (0x10000*1)/3;
+          if (g < r || r < b) { _out_rgb888 = 0xff0000; return false; }
+          max = g; med = r; min = b; hsv2_base = 85; hsv2_is_incr = false;
+          break;
+        case 3: // r<=g, g>b,  b>r  => g>b>r
+          u32_hsv_max_hue1 = _packhl2(u32_gb16, u32_gb16); // g, b
+          u32_hsv_min_hue2 = _pack2  (u32_or16, u32_or16); // r, r
+          s32_hsv_hue_base = (0x10000*1)/3;
+          if (g <= b || b <= r) { _out_rgb888 = 0xff0000; return false; }
+          max = g; med = b; min = r; hsv2_base = 85; hsv2_is_incr = true;
+          break;
+        case 4: // r>g,  g<=b, b<=r => r>=b>=g
+          u32_hsv_max_hue1 = _packlh2(u32_or16, u32_gb16); // r, g
+          u32_hsv_min_hue2 = _packhl2(u32_gb16, u32_gb16); // g, b
+          s32_hsv_hue_base = (0x10000*0)/3;
+          if (r < b || b < g) { _out_rgb888 = 0xff0000; return false; }
+          max = r; med = b; min = g; hsv2_base = 255; hsv2_is_incr = false;
+          break;
+        case 5: // r>g,  g<=b, b>r  => b>r>g
+          u32_hsv_max_hue1 = _pack2  (u32_gb16, u32_or16); // b, r
+          u32_hsv_min_hue2 = _packh2 (u32_gb16, u32_gb16); // g, g
+          s32_hsv_hue_base = (0x10000*2)/3;
+          if (b <= r || r <= g) { _out_rgb888 = 0xff0000; return false; }
+          max = b; med = r; min = g; hsv2_base = 170; hsv2_is_incr = true;
+          break;
+        case 6: // r>g,  g>b,  b<=r => r>g>b
+          u32_hsv_max_hue1 = _packlh2(u32_or16, u32_gb16); // r, g
+          u32_hsv_min_hue2 = _pack2  (u32_gb16, u32_gb16); // b, b
+          s32_hsv_hue_base = (0x10000*0)/3;
+          if (r <= g || g <= b) { _out_rgb888 = 0xff0000; return false; }
+          max = r; med = g; min = b; hsv2_base = 0; hsv2_is_incr = true;
+          break;
+
+        case 7: // r>g,  g>b,  b>r
+        default:
+          // invalid cases
+          _out_rgb888 = 0xff0000;
+          return false;
+      }
+
+
+      const uint32_t u32_hsv_deltas        = _sub2(u32_hsv_max_hue1, u32_hsv_min_hue2);
+      const uint16_t u16_hsv_max           = u32_hsv_max_hue1>>16;
+      const uint16_t u16_hsv_max_min_delta = u32_hsv_deltas>>16;
+      const uint32_t u32_hsv_mult1         = _pack2  (m_mult255_div[u16_hsv_max],
+                                                      u32_hsv_deltas);
+      const uint32_t u32_hsv_mult2         = _packhl2(u32_hsv_deltas,
+                                                      m_mult43_div[u16_hsv_max_min_delta]);
+      const int64_t  s64_hsv_mult          = _mpy2ll(u32_hsv_mult1, u32_hsv_mult2);
+      const int32_t  s32_hsv_sat_x256      = static_cast<int32_t>(_hill(s64_hsv_mult));
+      const int32_t  s32_hsv_hue_x256      = static_cast<int32_t>(_loll(s64_hsv_mult)) + s32_hsv_hue_base;
+      const uint32_t u32_hsv_sat_hue_x256  = _pack2(static_cast<uint32_t>(s32_hsv_sat_x256),
+                                                    static_cast<uint32_t>(s32_hsv_hue_x256));
+      const uint32_t u32_hsv_ooo_val_x256  = u32_hsv_max_hue1>>8; // get max in 8..15 bits
+      const uint32_t u32_hsv               = _packh4(u32_hsv_ooo_val_x256, u32_hsv_sat_hue_x256);
+      const uint32_t u32_hsv_det           = (  _cmpgtu4(u32_hsv, m_FAST_detectFrom)
+                                              | _cmpeq4( u32_hsv, m_FAST_detectFrom))
+                                           & (  _cmpltu4(u32_hsv, m_FAST_detectTo)
+                                              | _cmpeq4( u32_hsv, m_FAST_detectTo));
+      const bool hsv_det = u32_hsv_det == m_FAST_detectExpected;
+
+
+#warning TODO extra checks
+#if 1
+      const XDAS_UInt16 hsv2_v = max;
+      const bool hsv2_v_det = (m_detectValFrom <= hsv2_v) && (m_detectValTo >= hsv2_v);
+
+      /* optimized by table based multiplication with power-2 divisor, simulate 255*(max-min)/max */
+      const XDAS_UInt16 hsv2_s = (static_cast<XDAS_UInt16>(m_mult255_div[max]) * static_cast<XDAS_UInt16>(max-min)) >> 8;
+      const bool hsv2_s_det = (m_detectSatFrom <= hsv2_s) && (m_detectSatTo >= hsv2_s);
+
+      /* optimized by table based multiplication with power-2 divisor, simulate 43*(med-min)/(max-min) */
+      const XDAS_UInt16 hsv2_incr = (static_cast<XDAS_UInt16>(m_mult43_div[max-min]) * static_cast<XDAS_UInt16>(med-min)) >> 8;
+      const XDAS_UInt16 hsv2_h = hsv2_is_incr ? hsv2_base + hsv2_incr : hsv2_base - hsv2_incr;
+      const bool hsv2_h_det = (m_detectHueFrom <= m_detectHueTo)
+                            ? (m_detectHueFrom <= hsv2_h) && (m_detectHueTo >= hsv2_h)
+                            : (m_detectHueFrom <= hsv2_h) || (m_detectHueTo >= hsv2_h);
+
+
+
+      int16_t hsv_med_min = (u32_hsv_deltas&0xffff);
+      if (hsv_med_min != (hsv2_is_incr ? (med-min) : -(med-min)))
+      {
+        _out_rgb888 = 0xff0000;
+        return false;
+      }
+      int16_t hsv_mult43 = (u32_hsv_mult2&0xffff);
+      if (hsv_mult43 != m_mult43_div[max-min])
+      {
+        _out_rgb888 = 0xff0000;
+        return false;
+      }
+      int16_t hsv_med_min2 = (u32_hsv_mult1&0xffff);
+      if (hsv_med_min2 != hsv_med_min)
+      {
+        _out_rgb888 = 0xff0000;
+        return false;
+      }
+      if (hsv_med_min2 != (hsv2_is_incr ? (med-min) : -(med-min)))
+      {
+        _out_rgb888 = 0xff0000;
+        return false;
+      }
+      const int32_t hsv_incr1 = hsv2_incr;
+      const int32_t hsv_incr2 = static_cast<int32_t>(_loll(s64_hsv_mult)) / 256;
+      if (hsv_incr2 != (hsv_mult43 * hsv_med_min2)/256)
+      {
+        _out_rgb888 = 0xff0000;
+        return false;
+      }
+      if (hsv_incr2 != (hsv2_is_incr ? hsv_incr1 : -hsv_incr1))
+      {
+        _out_rgb888 = 0xff0000;
+        return false;
+      }
+      if (s32_hsv_hue_base/256 != hsv2_base)
+      {
+        if (s32_hsv_hue_base == 0 && hsv2_base == 255)
+          ; // ok
+        else
+        {
+          _out_rgb888 = 0xff0000;
+          return false;
+        }
+      }
+
+
+
+      if (u16_hsv_max != hsv2_v || u16_hsv_max < 0 || u16_hsv_max >= 0x100)
+      {
+        _out_rgb888 = 0xff0000;
+        return false;
+      }
+
+      if (s32_hsv_sat_x256 < 0 || s32_hsv_sat_x256 >= 0x10000)
+      {
+        _out_rgb888 = 0xff0000;
+        return false;
+      }
+      const int32_t s32_hsv_sat = (s32_hsv_sat_x256 >> 8);
+      if (s32_hsv_sat != hsv2_s || s32_hsv_sat < 0 || s32_hsv_sat >= 0x100)
+      {
+        _out_rgb888 = 0xff0000;
+        return false;
+      }
+
+
+      int32_t s32_hsv_hue = s32_hsv_hue_x256 / 256;
+      if (s32_hsv_hue < 0)
+        s32_hsv_hue += 0x100;
+      if (s32_hsv_hue < 0 || s32_hsv_hue >= 0x100)
+      {
+        _out_rgb888 = 0xff0000;
+        return false;
+      }
+      if (s32_hsv_hue != hsv2_h)
+      {
+        if (s32_hsv_hue == hsv2_h+1 || s32_hsv_hue+1 == hsv2_h)
+          ;
+        else if (s32_hsv_hue == 255 && hsv2_h == 0)
+          ;
+        else if (s32_hsv_hue == 0 && hsv2_h == 255)
+          ;
+        else
+        {
+          _out_rgb888 = 0xff0000;
+          return false;
+        }
+      }
+      if (s32_hsv_hue < 0 || s32_hsv_hue >= 0x100)
+      {
+        _out_rgb888 = 0xff0000;
+        return false;
+      }
+
+      if ((hsv2_h_det && hsv2_s_det && hsv2_v_det) != hsv_det)
+      {
+        _out_rgb888 = 0xff0000;
+        return true;
+      }
+#endif
+
+      if (hsv_det)
+      {
+        _out_rgb888 = 0xffff00;
+        return true;
+      }
+
+      return false;
+
     }
 
     void writeRgbPixel(XDAS_UInt16* _rgb,
@@ -197,7 +427,7 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
     }
 
     void FAST_writeRgbPixel(TrikCvImageDimension _srcCol,
-                            XDAS_UInt16* _rgbRow,
+                            uint16_t* _rgbRow,
                             const uint32_t _rgb888)
     {
       assert(_srcCol < m_srcToDstColConv.size());
@@ -285,20 +515,20 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
         writeRgbPixel(_srcCol, _rgbRow, _r, _g, _b);
     }
 
-    void /*__attribute__((noinline))*/ FAST_proceedRgbPixel(const TrikCvImageDimension _srcCol,
+    void __attribute__((noinline)) FAST_proceedRgbPixel(const TrikCvImageDimension _srcCol,
                                                         const TrikCvImageDimension _srcRow,
-                                                        XDAS_UInt16* _rgbRow,
+                                                        uint16_t* _rgbRow,
                                                         const uint32_t _rgb888)
     {
-      if (FAST_testifyRgbPixel(_rgb888))
+      uint32_t out_rgb888 = _rgb888;
+      if (FAST_testifyRgbPixel(_rgb888, out_rgb888))
       {
         m_targetX += _srcCol;
         m_targetY += _srcRow;
         ++m_targetPoints;
-        FAST_writeRgbPixel(_srcCol, _rgbRow, 0xffff00);
       }
-      else
-        FAST_writeRgbPixel(_srcCol, _rgbRow, _rgb888);
+
+      FAST_writeRgbPixel(_srcCol, _rgbRow, out_rgb888);
     }
 
 
@@ -377,18 +607,17 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
     }
 
 
-    void /*__attribute__((noinline))*/ FAST_proceedTwoYuyvPixels(const XDAS_UInt32 _yuyv,
+    void __attribute__((noinline)) FAST_proceedTwoYuyvPixels(const uint32_t _yuyv,
                                                              const TrikCvImageDimension _srcCol,
                                                              const TrikCvImageDimension _srcRow,
-                                                             XDAS_UInt16* _rgbRow)
+                                                             uint16_t* _rgbRow)
     {
-      const uint32_t u32_yuyv   = _yuyv;
-      const int64_t  s64_yuyv1  = _mpyu4ll(u32_yuyv,
+      const int64_t  s64_yuyv1  = _mpyu4ll(_yuyv,
                                             (static_cast<uint32_t>(static_cast<uint8_t>(409/4))<<24)
                                            |(static_cast<uint32_t>(static_cast<uint8_t>(298/4))<<16)
                                            |(static_cast<uint32_t>(static_cast<uint8_t>(516/4))<< 8)
                                            |(static_cast<uint32_t>(static_cast<uint8_t>(298/4))    ));
-      const int64_t  s64_yuyv2a = _mpyus4ll(u32_yuyv,
+      const int64_t  s64_yuyv2a = _mpyus4ll(_yuyv,
                                              (static_cast<uint32_t>(static_cast<uint8_t>(-208/4))<<24)
                                             |(static_cast<uint32_t>(static_cast<uint8_t>(-100/4))<< 8));
       const int32_t  s32_yuyv2b = _add2(_hill(s64_yuyv2a), _loll(s64_yuyv2a));
@@ -465,6 +694,20 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
       m_targetX = 0;
       m_targetY = 0;
       m_targetPoints = 0;
+
+      if (m_detectHueFrom <= m_detectHueTo)
+      {
+        m_FAST_detectFrom = (m_detectValFrom<<16) | (m_detectSatFrom<<8) | m_detectHueFrom;
+        m_FAST_detectTo   = (m_detectValTo  <<16) | (m_detectSatTo  <<8) | m_detectHueTo  ;
+        m_FAST_detectExpected = 0x7;
+      }
+      else
+      {
+        assert(m_detectHueFrom > 0 && m_detectHueTo < 255);
+        m_FAST_detectFrom = (m_detectValFrom<<16) | (m_detectSatFrom<<8) | (m_detectHueFrom-1);
+        m_FAST_detectTo   = (m_detectValTo  <<16) | (m_detectSatTo  <<8) | (m_detectHueTo  +1);
+        m_FAST_detectExpected = 0x6;
+      }
 
       for (TrikCvImageDimension srcRow=0; srcRow < m_inImageDesc.m_height; ++srcRow)
       {
