@@ -36,10 +36,10 @@ class BallDetector : public CVAlgorithm,
 
 #warning TODO temporary specialization; to be reworked
 
-#if 1
-#define NOINLINE __attribute__((noinline))
+#if 0
+#define DEBUG_INLINE __attribute__((noinline))
 #else
-#define NOINLINE
+#define DEBUG_INLINE __attribute__((always_inline))
 #endif
 
 template <>
@@ -181,7 +181,7 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
       return hsv_h_det && hsv_v_det && hsv_s_det;
     }
 
-    bool NOINLINE FAST_testifyRgbPixel(const uint32_t _rgb888, uint32_t& _out_rgb888)
+    bool DEBUG_INLINE FAST_testifyRgbPixel(const uint32_t _rgb888, uint32_t& _out_rgb888)
     {
       const uint32_t u32_rgbr = _shlmb(_swap4(_rgb888), _rgb888);
       const uint32_t u32_or16 = _unpkhu4(_rgb888);
@@ -372,10 +372,10 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
         writeRgbPixel(_srcCol, _rgbRow, _r, _g, _b);
     }
 
-    void NOINLINE FAST_proceedRgbPixel(const TrikCvImageDimension _srcCol,
-                                       const TrikCvImageDimension _srcRow,
-                                       uint16_t* _rgbRow,
-                                       const uint32_t _rgb888)
+    void DEBUG_INLINE FAST_proceedRgbPixel(const TrikCvImageDimension _srcCol,
+                                           const TrikCvImageDimension _srcRow,
+                                           uint16_t* _rgbRow,
+                                           const uint32_t _rgb888)
     {
       uint32_t out_rgb888 = _rgb888;
 #if 1
@@ -477,10 +477,10 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
     }
 
 
-    void NOINLINE FAST_proceedTwoYuyvPixels(const uint32_t _yuyv,
-                                            const TrikCvImageDimension _srcCol,
-                                            const TrikCvImageDimension _srcRow,
-                                            uint16_t* _rgbRow)
+    void DEBUG_INLINE FAST_proceedTwoYuyvPixels(const uint32_t _yuyv,
+                                                const TrikCvImageDimension _srcCol,
+                                                const TrikCvImageDimension _srcRow,
+                                                uint16_t* _rgbRow)
     {
       const int64_t  s64_yuyv1  = _mpyu4ll(_yuyv,
                                             (static_cast<uint32_t>(static_cast<uint8_t>(409/4))<<24)
