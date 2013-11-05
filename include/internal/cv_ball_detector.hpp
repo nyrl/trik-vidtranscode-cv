@@ -477,12 +477,11 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
                                            |(static_cast<uint32_t>(static_cast<uint8_t>(298/4))<<16)
                                            |(static_cast<uint32_t>(static_cast<uint8_t>(516/4))<< 8)
                                            |(static_cast<uint32_t>(static_cast<uint8_t>(298/4))    ));
-      const int64_t  s64_yuyv2a = _mpyus4ll(_yuyv,
-                                             (static_cast<uint32_t>(static_cast<uint8_t>(-208/4))<<24)
-                                            |(static_cast<uint32_t>(static_cast<uint8_t>(-100/4))<< 8));
-      const int32_t  s32_yuyv2b = _add2(_hill(s64_yuyv2a), _loll(s64_yuyv2a));
-      const uint32_t u32_rgb_h1 = _packlh2(s32_yuyv2b/*0*/, _hill(s64_yuyv1));
-      const uint32_t u32_rgb_l1 = _packh2( s32_yuyv2b,      _loll(s64_yuyv1));
+      const uint32_t u32_yuyv2  = _dotpus4(_yuyv&0xff00ff00,
+                                            (static_cast<uint32_t>(static_cast<uint8_t>(-208/4))<<24)
+                                           |(static_cast<uint32_t>(static_cast<uint8_t>(-100/4))<< 8));
+      const uint32_t u32_rgb_h1 = _packh2( u32_yuyv2/*0*/, _hill(s64_yuyv1));
+      const uint32_t u32_rgb_l1 = _packlh2(u32_yuyv2,      _loll(s64_yuyv1));
       const uint32_t u32_rgb_h2 = _add2(u32_rgb_h1,
                                         (static_cast<uint32_t>(static_cast<uint16_t>(128/4 + (-128*409-16*298)/4))));
       const uint32_t u32_rgb_l2 = _add2(u32_rgb_l1,
