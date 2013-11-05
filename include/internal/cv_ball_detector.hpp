@@ -578,11 +578,11 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
         const XDAS_UInt32* srcImage = reinterpret_cast<XDAS_UInt32*>(_inImage.m_ptr + srcRowOfs);
 
         const TrikCvImageSize dstRowOfs = dstRow*m_outImageDesc.m_lineLength;
-        XDAS_UInt16* dstImage = reinterpret_cast<XDAS_UInt16*>(_outImage.m_ptr + dstRowOfs);
+        XDAS_UInt16* dstImageRow = reinterpret_cast<XDAS_UInt16*>(_outImage.m_ptr + dstRowOfs);
 
         assert(m_inImageDesc.m_width % 32 == 0); // verified in setup
         for (TrikCvImageDimension srcCol=0; srcCol < m_inImageDesc.m_width; srcCol+=2)
-          FAST_proceedTwoYuyvPixels(*srcImage++, srcCol, srcRow, dstImage);
+          FAST_proceedTwoYuyvPixels(*srcImage++, srcCol, srcRow, dstImageRow);
       }
 
       const TrikCvImageDimension inImagePixels = m_inImageDesc.m_width * m_inImageDesc.m_height;
