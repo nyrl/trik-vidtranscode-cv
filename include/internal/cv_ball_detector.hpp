@@ -36,23 +36,24 @@ class BallDetector : public CVAlgorithm,
 
 #warning TODO temporary specialization; to be reworked
 
-#if 0
+#if 1
 #define DEBUG_INLINE __attribute__((noinline))
 #else
 #define DEBUG_INLINE __attribute__((always_inline))
 #endif
+static uint32_t g_FAST_mult255_div[(1u<<8)];
+static uint32_t g_FAST_mult43_div[(1u<<8)];
+
 
 template <>
 class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_RGB565X> : public CVAlgorithm
 {
   private:
+    uint64_t m_FAST_detectRange;
+    uint8_t  m_FAST_detectExpected;
+
     TrikCvImageDesc m_inImageDesc;
     TrikCvImageDesc m_outImageDesc;
-
-    std::vector<TrikCvImageDimension> m_srcToDstColConv;
-    std::vector<TrikCvImageDimension> m_srcToDstRowConv;
-    std::vector<XDAS_UInt16> m_mult255_div;
-    std::vector<XDAS_UInt16> m_mult43_div;
 
     XDAS_UInt8 m_detectHueFrom;
     XDAS_UInt8 m_detectHueTo;
@@ -64,8 +65,10 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
     XDAS_Int32  m_targetY;
     XDAS_UInt32 m_targetPoints;
 
-    uint64_t m_FAST_detectRange;
-    uint8_t  m_FAST_detectExpected;
+    std::vector<TrikCvImageDimension> m_srcToDstColConv;
+    std::vector<TrikCvImageDimension> m_srcToDstRowConv;
+    std::vector<XDAS_UInt16> m_mult255_div;
+    std::vector<XDAS_UInt16> m_mult43_div;
 
     bool __attribute__((always_inline)) testifyRgbPixel(const XDAS_UInt8 _r,
                                                         const XDAS_UInt8 _g,
@@ -237,14 +240,13 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
           return false;
       }
 
-
       const uint32_t u32_hsv_deltas        = _sub2(u32_hsv_max_hue1, u32_hsv_min_hue2);
-      const uint16_t u16_hsv_max           = u32_hsv_max_hue1>>16;
-      const uint16_t u16_hsv_max_min_delta = u32_hsv_deltas>>16;
-      const uint32_t u32_hsv_mult1         = _pack2  (m_mult255_div[u16_hsv_max],
+      const uint32_t u32_hsv_max           = _packh2(u32_or16, u32_hsv_max_hue1);
+      const uint32_t u32_hsv_max_min_delta = _packh2(u32_or16, u32_hsv_deltas);
+      const uint32_t u32_hsv_mult1         = _pack2  (g_FAST_mult255_div[u32_hsv_max],
                                                       u32_hsv_deltas);
       const uint32_t u32_hsv_mult2         = _packhl2(u32_hsv_deltas,
-                                                      m_mult43_div[u16_hsv_max_min_delta]);
+                                                      g_FAST_mult43_div[u32_hsv_max_min_delta]);
       const int64_t  s64_hsv_mult          = _mpy2ll(u32_hsv_mult1, u32_hsv_mult2);
       const int32_t  s32_hsv_sat_x256      = static_cast<int32_t>(_hill(s64_hsv_mult));
       const int32_t  s32_hsv_hue_x256      = static_cast<int32_t>(_loll(s64_hsv_mult)) + s32_hsv_hue_base;
@@ -546,13 +548,21 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
 
       m_mult255_div.resize(0x100);
       m_mult255_div[0] = 0;
+      g_FAST_mult255_div[0] = 0;
       for (XDAS_UInt16 idx = 1; idx < m_mult255_div.size(); ++idx)
+      {
         m_mult255_div[idx] = (static_cast<XDAS_UInt16>(255) * static_cast<XDAS_UInt16>(1u<<8)) / idx;
+        g_FAST_mult255_div[idx] = (255u * (1u<<8)) / idx;
+      }
 
       m_mult43_div.resize(0x100);
       m_mult43_div[0] = 0;
+      g_FAST_mult43_div[0] = 0;
       for (XDAS_UInt16 idx = 1; idx < m_mult43_div.size(); ++idx)
+      {
         m_mult43_div[idx] = (static_cast<XDAS_UInt16>(43) * static_cast<XDAS_UInt16>(1u<<8)) / idx;
+        g_FAST_mult43_div[idx] = (43u * (1u<<8)) / idx;
+      }
 
       return true;
     }
