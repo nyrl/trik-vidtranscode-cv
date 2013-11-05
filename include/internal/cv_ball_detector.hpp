@@ -41,6 +41,9 @@ class BallDetector : public CVAlgorithm,
 #else
 #define DEBUG_INLINE __attribute__((always_inline))
 #endif
+//#define DEBUG_ORIGINAL_TESTIFY
+//#define DEBUG_VERIFY_TESTIFY
+
 static uint32_t s_FAST_mult255_div[(1u<<8)];
 static uint32_t s_FAST_mult43_div[(1u<<8)];
 
@@ -70,9 +73,9 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
     std::vector<XDAS_UInt16> m_mult255_div;
     std::vector<XDAS_UInt16> m_mult43_div;
 
-    bool __attribute__((always_inline)) testifyRgbPixel(const XDAS_UInt8 _r,
-                                                        const XDAS_UInt8 _g,
-                                                        const XDAS_UInt8 _b)
+    bool DEBUG_INLINE testifyRgbPixel(const XDAS_UInt8 _r,
+                                      const XDAS_UInt8 _g,
+                                      const XDAS_UInt8 _b)
     {
       XDAS_UInt8 max;
       XDAS_UInt8 med;
@@ -394,17 +397,18 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
                                            const uint32_t _rgb888)
     {
       uint32_t out_rgb888 = _rgb888;
-#if 1
-      const bool pixelDetected = FAST_testifyRgbPixel(_rgb888, out_rgb888);
-#warning Extra check for a while
-#if 0
-      if (testifyRgbPixel((_rgb888>>16)&0xff, (_rgb888>>8)&0xff, (_rgb888)&0xff) != pixelDetected)
-        out_rgb888 = 0x00ffff;
-#endif
-#else
+
+#ifdef DEBUG_ORIGINAL_TESTIFY
       const bool pixelDetected = testifyRgbPixel((_rgb888>>16)&0xff, (_rgb888>>8)&0xff, (_rgb888)&0xff);
       if (pixelDetected)
         out_rgb888 = 0xffff00;
+#else
+      const bool pixelDetected = FAST_testifyRgbPixel(_rgb888, out_rgb888);
+# ifdef DEBUG_VERIFY_TESTIFY
+#  warning Extra check for a while
+      if (testifyRgbPixel((_rgb888>>16)&0xff, (_rgb888>>8)&0xff, (_rgb888)&0xff) != pixelDetected)
+        out_rgb888 = 0x00ffff;
+# endif
 #endif
 
       if (pixelDetected)
