@@ -64,9 +64,8 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
     XDAS_Int32  m_targetY;
     XDAS_UInt32 m_targetPoints;
 
-    uint32_t m_FAST_detectFrom;
-    uint32_t m_FAST_detectTo;
-    uint32_t m_FAST_detectExpected;
+    uint64_t m_FAST_detectRange;
+    uint8_t  m_FAST_detectExpected;
 
     bool testifyRgbPixel(const XDAS_UInt8 _r, const XDAS_UInt8 _g, const XDAS_UInt8 _b)
     {
@@ -251,12 +250,13 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
                                                     static_cast<uint32_t>(s32_hsv_hue_x256));
       const uint32_t u32_hsv_ooo_val_x256  = u32_hsv_max_hue1>>8; // get max in 8..15 bits
       const uint32_t u32_hsv               = _packh4(u32_hsv_ooo_val_x256, u32_hsv_sat_hue_x256);
-      const uint32_t u32_hsv_det           = (  _cmpgtu4(u32_hsv, m_FAST_detectFrom)
-                                              | _cmpeq4( u32_hsv, m_FAST_detectFrom))
-                                           & (  _cmpltu4(u32_hsv, m_FAST_detectTo)
-                                              | _cmpeq4( u32_hsv, m_FAST_detectTo));
+      const uint64_t u64_hsv_range         = m_FAST_detectRange;
+      const uint8_t  u8_hsv_det            = (  _cmpgtu4(u32_hsv, _hill(u64_hsv_range))
+                                              | _cmpeq4( u32_hsv, _hill(u64_hsv_range)))
+                                           & (  _cmpltu4(u32_hsv, _loll(u64_hsv_range))
+                                              | _cmpeq4( u32_hsv, _loll(u64_hsv_range)));
 
-      if (u32_hsv_det == m_FAST_detectExpected)
+      if (u8_hsv_det == m_FAST_detectExpected)
       {
         _out_rgb888 = 0xffff00;
         return true;
@@ -566,15 +566,15 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
 
       if (m_detectHueFrom <= m_detectHueTo)
       {
-        m_FAST_detectFrom = (m_detectValFrom<<16) | (m_detectSatFrom<<8) | m_detectHueFrom;
-        m_FAST_detectTo   = (m_detectValTo  <<16) | (m_detectSatTo  <<8) | m_detectHueTo  ;
+        m_FAST_detectRange = _itoll((m_detectValFrom<<16) | (m_detectSatFrom<<8) | m_detectHueFrom,
+                                    (m_detectValTo  <<16) | (m_detectSatTo  <<8) | m_detectHueTo  );
         m_FAST_detectExpected = 0x8|0x7; // top byte is always compare equal
       }
       else
       {
         assert(m_detectHueFrom > 0 && m_detectHueTo < 255);
-        m_FAST_detectFrom = (m_detectValFrom<<16) | (m_detectSatFrom<<8) | (m_detectHueTo  +1);
-        m_FAST_detectTo   = (m_detectValTo  <<16) | (m_detectSatTo  <<8) | (m_detectHueFrom-1);
+        m_FAST_detectRange = _itoll((m_detectValFrom<<16) | (m_detectSatFrom<<8) | (m_detectHueTo  +1),
+                                    (m_detectValTo  <<16) | (m_detectSatTo  <<8) | (m_detectHueFrom-1));
         m_FAST_detectExpected = 0x8|0x6; // top byte is always compare equal
       }
 
