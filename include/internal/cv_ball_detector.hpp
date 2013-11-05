@@ -36,6 +36,11 @@ class BallDetector : public CVAlgorithm,
 
 #warning TODO temporary specialization; to be reworked
 
+#if 1
+#define NOINLINE __attribute__((noinline))
+#else
+#define NOINLINE
+#endif
 
 template <>
 class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_RGB565X> : public CVAlgorithm
@@ -177,7 +182,7 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
       return hsv_h_det && hsv_v_det && hsv_s_det;
     }
 
-    bool __attribute__((noinline)) FAST_testifyRgbPixel(const uint32_t _rgb888, uint32_t& _out_rgb888)
+    bool NOINLINE FAST_testifyRgbPixel(const uint32_t _rgb888, uint32_t& _out_rgb888)
     {
       const uint32_t u32_rgbr = _shlmb(_swap4(_rgb888), _rgb888);
       const uint32_t u32_or16 = _unpkhu4(_rgb888);
@@ -367,18 +372,23 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
         writeRgbPixel(_srcCol, _rgbRow, _r, _g, _b);
     }
 
-    void __attribute__((noinline)) FAST_proceedRgbPixel(const TrikCvImageDimension _srcCol,
-                                                        const TrikCvImageDimension _srcRow,
-                                                        uint16_t* _rgbRow,
-                                                        const uint32_t _rgb888)
+    void NOINLINE FAST_proceedRgbPixel(const TrikCvImageDimension _srcCol,
+                                       const TrikCvImageDimension _srcRow,
+                                       uint16_t* _rgbRow,
+                                       const uint32_t _rgb888)
     {
       uint32_t out_rgb888 = _rgb888;
-      const bool pixelDetected = FAST_testifyRgbPixel(_rgb888, out_rgb888);
-
-#warning Extra check for a while
 #if 1
+      const bool pixelDetected = FAST_testifyRgbPixel(_rgb888, out_rgb888);
+#warning Extra check for a while
+#if 0
       if (testifyRgbPixel((_rgb888>>16)&0xff, (_rgb888>>8)&0xff, (_rgb888)&0xff) != pixelDetected)
         out_rgb888 = 0x00ffff;
+#endif
+#else
+      const bool pixelDetected = testifyRgbPixel((_rgb888>>16)&0xff, (_rgb888>>8)&0xff, (_rgb888)&0xff);
+      if (pixelDetected)
+        out_rgb888 = 0xffff00;
 #endif
 
       if (pixelDetected)
@@ -467,10 +477,10 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
     }
 
 
-    void __attribute__((noinline)) FAST_proceedTwoYuyvPixels(const uint32_t _yuyv,
-                                                             const TrikCvImageDimension _srcCol,
-                                                             const TrikCvImageDimension _srcRow,
-                                                             uint16_t* _rgbRow)
+    void NOINLINE FAST_proceedTwoYuyvPixels(const uint32_t _yuyv,
+                                            const TrikCvImageDimension _srcCol,
+                                            const TrikCvImageDimension _srcRow,
+                                            uint16_t* _rgbRow)
     {
       const int64_t  s64_yuyv1  = _mpyu4ll(_yuyv,
                                             (static_cast<uint32_t>(static_cast<uint8_t>(409/4))<<24)
