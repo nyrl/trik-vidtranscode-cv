@@ -264,14 +264,11 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
                                            & (  _cmpltu4(u32_hsv, _loll(u64_hsv_range))
                                               | _cmpeq4( u32_hsv, _loll(u64_hsv_range)));
 
-      if (u8_hsv_det == m_FAST_detectExpected)
-      {
-        _out_rgb888 = 0xffff00;
-        return true;
-      }
+      if (u8_hsv_det != m_FAST_detectExpected)
+        return false;
 
-      return false;
-
+      _out_rgb888 = 0xffff00;
+      return true;
     }
 
     static void __attribute__((always_inline)) writeRgbPixel(XDAS_UInt16* _rgb,
