@@ -173,9 +173,10 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
       return hsv_h_det && hsv_v_det && hsv_s_det;
     }
 
-    bool __attribute__((noinline)) FAST_testifyRgbPixel(const uint32_t _rgb)
+    bool FAST_testifyRgbPixel(const uint32_t _rgb888)
     {
-      return testifyRgbPixel((_rgb>>16)&0xff, (_rgb>>8)&0xff, (_rgb)&0xff);
+#warning TODO
+      return testifyRgbPixel((_rgb888>>16)&0xff, (_rgb888>>8)&0xff, (_rgb888)&0xff);
     }
 
     void writeRgbPixel(XDAS_UInt16* _rgb,
@@ -195,13 +196,14 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
       writeRgbPixel(&_rgbRow[dstCol], _r, _g, _b);
     }
 
-    void __attribute__((noinline)) FAST_writeRgbPixel(TrikCvImageDimension _srcCol,
-                                                      XDAS_UInt16* _rgbRow,
-                                                      const uint32_t _rgb)
+    void FAST_writeRgbPixel(TrikCvImageDimension _srcCol,
+                            XDAS_UInt16* _rgbRow,
+                            const uint32_t _rgb888)
     {
       assert(_srcCol < m_srcToDstColConv.size());
       const TrikCvImageDimension dstCol = m_srcToDstColConv[_srcCol];
-      _rgbRow[dstCol] = (_rgb>>(16+3)) | ((_rgb&0xfc)>>(8-5)) | ((_rgb&0xf8)<<11);
+
+      _rgbRow[dstCol] = ((_rgb888>>19)&0x001f) | ((_rgb888>>5)&0x07e0) | ((_rgb888<<8)&0xf800);
     }
 
     void drawRgbPixel(TrikCvImageDimension _srcCol,
@@ -283,12 +285,12 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
         writeRgbPixel(_srcCol, _rgbRow, _r, _g, _b);
     }
 
-    void FAST_proceedRgbPixel(const TrikCvImageDimension _srcCol,
-                              const TrikCvImageDimension _srcRow,
-                              XDAS_UInt16* _rgbRow,
-                              const uint32_t _rgb)
+    void /*__attribute__((noinline))*/ FAST_proceedRgbPixel(const TrikCvImageDimension _srcCol,
+                                                        const TrikCvImageDimension _srcRow,
+                                                        XDAS_UInt16* _rgbRow,
+                                                        const uint32_t _rgb888)
     {
-      if (FAST_testifyRgbPixel(_rgb))
+      if (FAST_testifyRgbPixel(_rgb888))
       {
         m_targetX += _srcCol;
         m_targetY += _srcRow;
@@ -296,7 +298,7 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
         FAST_writeRgbPixel(_srcCol, _rgbRow, 0xffff00);
       }
       else
-        FAST_writeRgbPixel(_srcCol, _rgbRow, _rgb);
+        FAST_writeRgbPixel(_srcCol, _rgbRow, _rgb888);
     }
 
 
@@ -375,7 +377,7 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
     }
 
 
-    void __attribute__((noinline)) FAST_proceedTwoYuyvPixels(const XDAS_UInt32 _yuyv,
+    void /*__attribute__((noinline))*/ FAST_proceedTwoYuyvPixels(const XDAS_UInt32 _yuyv,
                                                              const TrikCvImageDimension _srcCol,
                                                              const TrikCvImageDimension _srcRow,
                                                              XDAS_UInt16* _rgbRow)
@@ -388,8 +390,8 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
 
         union {
           struct {
-            int8_t h;
             int8_t l;
+            int8_t h;
           } p16;
           int16_t s16;
         } v;
@@ -402,8 +404,8 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
 
         union {
           struct {
-            uint8_t h;
             uint8_t l;
+            uint8_t h;
           } p16;
           uint16_t u16;
         } v;
@@ -417,8 +419,8 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
 
         union {
           struct {
-            packs16 h;
             packs16 l;
+            packs16 h;
           } p32;
           int32_t s32;
         } v;
@@ -432,8 +434,8 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
 
         union {
           struct {
-            packu16 h;
             packu16 l;
+            packu16 h;
           } p32;
           uint32_t u32;
         } v;
@@ -447,8 +449,8 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
 
         union {
           struct {
-            packs32 h;
             packs32 l;
+            packs32 h;
           } p64;
           int64_t s64;
         } v;
@@ -465,7 +467,7 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
       const packs64 ps64_yuyv2a = packs64::s64(_mpyus4ll(pu32_yuyv.v.u32,
                                                          //packs32::s8x4(-208/4, 0, -100/4, 0).v.s32));
                                                          (static_cast<uint32_t>(static_cast<uint8_t>(-208/4))<<24)
-                                                        |(static_cast<uint32_t>(static_cast<uint8_t>(-100/4))<< 8)));
+                                                         |(static_cast<uint32_t>(static_cast<uint8_t>(-100/4))<< 8)));
       const packs32 ps32_yuyv2b = packs32::s32(_add2(ps64_yuyv2a.v.p64.h.v.s32, ps64_yuyv2a.v.p64.l.v.s32));
       //const packs64 ps64_rgb1a  = packs64::s16x4(0, ps64_yuyv1.v.p64.h.v.p32.h.v.s16, ps32_yuyv2b.v.p32.h.v.s16, ps64_yuyv1.v.p64.l.v.p32.h.v.s16);
       const packs64 ps64_rgb1a  = packs64::s32x2(_packlh2(ps32_yuyv2b.v.s32, ps64_yuyv1.v.p64.h.v.s32),
@@ -477,16 +479,21 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
                                                        //packs32::s16x2(128/4 + (+128*100+128*208-16*298)/4, 128/4 + (-128*516-16*298)/4).v.s32));
                                                         (static_cast<uint32_t>(static_cast<uint16_t>(128/4 + (+128*100+128*208-16*298)/4)<<16))
                                                        |(static_cast<uint32_t>(static_cast<uint16_t>(128/4 + (-128*516-16*298)/4)))));
+
       //const packs64 ps64_y1     = packs64::s16x4(0, ps64_yuyv1.v.p64.l.v.p32.l.v.s16, ps64_yuyv1.v.p64.l.v.p32.l.v.s16, ps64_yuyv1.v.p64.l.v.p32.l.v.s16);
       const packs64 ps64_y1     = packs64::s32x2(ps64_yuyv1.v.p64.l.v.p32.l.v.s16,
                                                  _pack2(ps64_yuyv1.v.p64.l.v.s32, ps64_yuyv1.v.p64.l.v.s32));
       //const packs64 ps64_y2     = packs64::s16x4(0, ps64_yuyv1.v.p64.h.v.p32.l.v.s16, ps64_yuyv1.v.p64.h.v.p32.l.v.s16, ps64_yuyv1.v.p64.h.v.p32.l.v.s16);
       const packs64 ps64_y2     = packs64::s32x2(ps64_yuyv1.v.p64.h.v.p32.l.v.s16,
                                                  _pack2(ps64_yuyv1.v.p64.h.v.s32, ps64_yuyv1.v.p64.h.v.s32));
-      const packs64 ps64_rgb21  = packs64::s32x2(_add2(ps64_rgb1b.v.p64.h.v.s32, ps64_y1.v.p64.h.v.s32),
-                                                 _add2(ps64_rgb1b.v.p64.l.v.s32, ps64_y1.v.p64.l.v.s32));
-      const packs64 ps64_rgb22  = packs64::s32x2(_add2(ps64_rgb1b.v.p64.h.v.s32, ps64_y2.v.p64.h.v.s32),
-                                                 _add2(ps64_rgb1b.v.p64.l.v.s32, ps64_y2.v.p64.l.v.s32));
+      const packs32 ps32_rgb21h = packs32::s32(_add2(ps64_rgb1b.v.p64.h.v.s32, ps64_y1.v.p64.h.v.s32));
+      const packs32 ps32_rgb21l = packs32::s32(_add2(ps64_rgb1b.v.p64.l.v.s32, ps64_y1.v.p64.l.v.s32));
+      const packs64 ps64_rgb21  = packs64::s32x2(_shr2(ps32_rgb21h.v.s32, 6),
+                                                 _shr2(ps32_rgb21l.v.s32, 6));
+      const packs32 ps32_rgb22h = packs32::s32(_add2(ps64_rgb1b.v.p64.h.v.s32, ps64_y2.v.p64.h.v.s32));
+      const packs32 ps32_rgb22l = packs32::s32(_add2(ps64_rgb1b.v.p64.l.v.s32, ps64_y2.v.p64.l.v.s32));
+      const packs64 ps64_rgb22  = packs64::s32x2(_shr2(ps32_rgb22h.v.s32, 6),
+                                                 _shr2(ps32_rgb22l.v.s32, 6));
       const packu32 pu32_rgb_p1 = packu32::u32(_spacku4(ps64_rgb21.v.p64.h.v.s32, ps64_rgb21.v.p64.l.v.s32));
       const packu32 pu32_rgb_p2 = packu32::u32(_spacku4(ps64_rgb22.v.p64.h.v.s32, ps64_rgb22.v.p64.l.v.s32));
 
@@ -561,7 +568,7 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
 
         assert(m_inImageDesc.m_width % 32 == 0); // verified in setup
         for (TrikCvImageDimension srcCol=0; srcCol < m_inImageDesc.m_width; srcCol+=2)
-          proceedTwoYuyvPixels(*srcImage++, srcCol, srcRow, dstImage);
+          FAST_proceedTwoYuyvPixels(*srcImage++, srcCol, srcRow, dstImage);
       }
 
       const TrikCvImageDimension inImagePixels = m_inImageDesc.m_width * m_inImageDesc.m_height;
