@@ -41,8 +41,8 @@ class BallDetector : public CVAlgorithm,
 #else
 #define DEBUG_INLINE __attribute__((always_inline))
 #endif
-static uint32_t g_FAST_mult255_div[(1u<<8)];
-static uint32_t g_FAST_mult43_div[(1u<<8)];
+static uint32_t s_FAST_mult255_div[(1u<<8)];
+static uint32_t s_FAST_mult43_div[(1u<<8)];
 
 
 template <>
@@ -186,7 +186,8 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
       return hsv_h_det && hsv_v_det && hsv_s_det;
     }
 
-    bool DEBUG_INLINE FAST_testifyRgbPixel(const uint32_t _rgb888, uint32_t& _out_rgb888)
+    bool DEBUG_INLINE FAST_testifyRgbPixel(const uint32_t _rgb888,
+                                           uint32_t& _out_rgb888) const
     {
       const uint32_t u32_rgbr = _shlmb(_swap4(_rgb888), _rgb888);
       const uint32_t u32_or16 = _unpkhu4(_rgb888);
@@ -243,10 +244,10 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
       const uint32_t u32_hsv_deltas        = _sub2(u32_hsv_max_hue1, u32_hsv_min_hue2);
       const uint32_t u32_hsv_max           = _packh2(u32_or16, u32_hsv_max_hue1);
       const uint32_t u32_hsv_max_min_delta = _packh2(u32_or16, u32_hsv_deltas);
-      const uint32_t u32_hsv_mult1         = _pack2  (g_FAST_mult255_div[u32_hsv_max],
+      const uint32_t u32_hsv_mult1         = _pack2  (s_FAST_mult255_div[u32_hsv_max],
                                                       u32_hsv_deltas);
       const uint32_t u32_hsv_mult2         = _packhl2(u32_hsv_deltas,
-                                                      g_FAST_mult43_div[u32_hsv_max_min_delta]);
+                                                      s_FAST_mult43_div[u32_hsv_max_min_delta]);
       const int64_t  s64_hsv_mult          = _mpy2ll(u32_hsv_mult1, u32_hsv_mult2);
       const int32_t  s32_hsv_sat_x256      = static_cast<int32_t>(_hill(s64_hsv_mult));
       const int32_t  s32_hsv_hue_x256      = static_cast<int32_t>(_loll(s64_hsv_mult)) + s32_hsv_hue_base;
@@ -291,9 +292,10 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
       writeRgbPixel(&_rgbRow[dstCol], _r, _g, _b);
     }
 
-    void __attribute__((always_inline)) FAST_writeRgbPixel(TrikCvImageDimension _srcCol,
+    void __attribute__((always_inline)) FAST_writeRgbPixel(const uint16_t _srcRow,
+                                                           const uint16_t _srcCol,
                                                            uint16_t* _rgbRow,
-                                                           const uint32_t _rgb888)
+                                                           const uint32_t _rgb888) const
     {
       assert(_srcCol < m_srcToDstColConv.size());
       const TrikCvImageDimension dstCol = m_srcToDstColConv[_srcCol];
@@ -386,8 +388,8 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
         writeRgbPixel(_srcCol, _rgbRow, _r, _g, _b);
     }
 
-    void DEBUG_INLINE FAST_proceedRgbPixel(const TrikCvImageDimension _srcCol,
-                                           const TrikCvImageDimension _srcRow,
+    void DEBUG_INLINE FAST_proceedRgbPixel(const uint16_t _srcRow,
+                                           const uint16_t _srcCol,
                                            uint16_t* _rgbRow,
                                            const uint32_t _rgb888)
     {
@@ -412,7 +414,7 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
         ++m_targetPoints;
       }
 
-      FAST_writeRgbPixel(_srcCol, _rgbRow, out_rgb888);
+      FAST_writeRgbPixel(_srcRow, _srcCol, _rgbRow, out_rgb888);
     }
 
 
@@ -491,10 +493,10 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
     }
 
 
-    void DEBUG_INLINE FAST_proceedTwoYuyvPixels(const uint32_t _yuyv,
-                                                const TrikCvImageDimension _srcCol,
-                                                const TrikCvImageDimension _srcRow,
-                                                uint16_t* _rgbRow)
+    void DEBUG_INLINE FAST_proceedTwoYuyvPixels(const uint16_t _srcRow,
+                                                const uint16_t _srcCol,
+                                                uint16_t* _rgbRow,
+                                                const uint32_t _yuyv)
     {
       const int64_t  s64_yuyv1  = _mpyu4ll(_yuyv,
                                             (static_cast<uint32_t>(static_cast<uint8_t>(409/4))<<24)
@@ -520,9 +522,9 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
       const uint32_t u32_rgb_p1 = _spacku4(u32_rgb21h, u32_rgb21l);
       const uint32_t u32_rgb_p2 = _spacku4(u32_rgb22h, u32_rgb22l);
 
-      FAST_proceedRgbPixel(_srcCol+0, _srcRow, _rgbRow, u32_rgb_p1);
+      FAST_proceedRgbPixel(_srcRow, _srcCol+0, _rgbRow, u32_rgb_p1);
 
-      FAST_proceedRgbPixel(_srcCol+1, _srcRow, _rgbRow, u32_rgb_p2);
+      FAST_proceedRgbPixel(_srcRow, _srcCol+1, _rgbRow, u32_rgb_p2);
     }
 
 
@@ -548,20 +550,20 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
 
       m_mult255_div.resize(0x100);
       m_mult255_div[0] = 0;
-      g_FAST_mult255_div[0] = 0;
+      s_FAST_mult255_div[0] = 0;
       for (XDAS_UInt16 idx = 1; idx < m_mult255_div.size(); ++idx)
       {
         m_mult255_div[idx] = (static_cast<XDAS_UInt16>(255) * static_cast<XDAS_UInt16>(1u<<8)) / idx;
-        g_FAST_mult255_div[idx] = (255u * (1u<<8)) / idx;
+        s_FAST_mult255_div[idx] = (255u * (1u<<8)) / idx;
       }
 
       m_mult43_div.resize(0x100);
       m_mult43_div[0] = 0;
-      g_FAST_mult43_div[0] = 0;
+      s_FAST_mult43_div[0] = 0;
       for (XDAS_UInt16 idx = 1; idx < m_mult43_div.size(); ++idx)
       {
         m_mult43_div[idx] = (static_cast<XDAS_UInt16>(43) * static_cast<XDAS_UInt16>(1u<<8)) / idx;
-        g_FAST_mult43_div[idx] = (43u * (1u<<8)) / idx;
+        s_FAST_mult43_div[idx] = (43u * (1u<<8)) / idx;
       }
 
       return true;
@@ -613,7 +615,7 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
 
         assert(m_inImageDesc.m_width % 32 == 0); // verified in setup
         for (TrikCvImageDimension srcCol=0; srcCol < m_inImageDesc.m_width; srcCol+=2)
-          FAST_proceedTwoYuyvPixels(*srcImage++, srcCol, srcRow, dstImageRow);
+          FAST_proceedTwoYuyvPixels(srcRow, srcCol, dstImageRow, *srcImage++);
       }
 
       const TrikCvImageDimension inImagePixels = m_inImageDesc.m_width * m_inImageDesc.m_height;
