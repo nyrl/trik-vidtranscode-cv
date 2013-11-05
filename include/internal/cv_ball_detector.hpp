@@ -44,8 +44,8 @@ class BallDetector : public CVAlgorithm,
 //#define DEBUG_ORIGINAL_TESTIFY
 //#define DEBUG_VERIFY_TESTIFY
 
-static uint32_t s_FAST_mult255_div[(1u<<8)];
-static uint32_t s_FAST_mult43_div[(1u<<8)];
+static uint16_t s_FAST_mult255_div[(1u<<8)];
+static uint16_t s_FAST_mult43_div[(1u<<8)];
 
 
 template <>
