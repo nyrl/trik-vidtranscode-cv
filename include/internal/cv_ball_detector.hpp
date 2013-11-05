@@ -67,7 +67,9 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
     uint64_t m_FAST_detectRange;
     uint8_t  m_FAST_detectExpected;
 
-    bool testifyRgbPixel(const XDAS_UInt8 _r, const XDAS_UInt8 _g, const XDAS_UInt8 _b)
+    bool __attribute__((always_inline)) testifyRgbPixel(const XDAS_UInt8 _r,
+                                                        const XDAS_UInt8 _g,
+                                                        const XDAS_UInt8 _b)
     {
       XDAS_UInt8 max;
       XDAS_UInt8 med;
@@ -266,26 +268,30 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
 
     }
 
-    void writeRgbPixel(XDAS_UInt16* _rgb,
-                       const XDAS_UInt8 _r, const XDAS_UInt8 _g, const XDAS_UInt8 _b)
+    static void __attribute__((always_inline)) writeRgbPixel(XDAS_UInt16* _rgb,
+                                                             const XDAS_UInt8 _r,
+                                                             const XDAS_UInt8 _g,
+                                                             const XDAS_UInt8 _b)
     {
       *_rgb = (static_cast<XDAS_UInt16>(_r)     >>3)
             | (static_cast<XDAS_UInt16>(_g&0xfc)<<3)
             | (static_cast<XDAS_UInt16>(_b&0xf8)<<8);
     }
 
-    void writeRgbPixel(TrikCvImageDimension _srcCol,
-                       XDAS_UInt16* _rgbRow,
-                       const XDAS_UInt8 _r, const XDAS_UInt8 _g, const XDAS_UInt8 _b)
+    void __attribute__((always_inline)) writeRgbPixel(TrikCvImageDimension _srcCol,
+                                                      XDAS_UInt16* _rgbRow,
+                                                      const XDAS_UInt8 _r,
+                                                      const XDAS_UInt8 _g,
+                                                      const XDAS_UInt8 _b)
     {
       assert(_srcCol < m_srcToDstColConv.size());
       const TrikCvImageDimension dstCol = m_srcToDstColConv[_srcCol];
       writeRgbPixel(&_rgbRow[dstCol], _r, _g, _b);
     }
 
-    void FAST_writeRgbPixel(TrikCvImageDimension _srcCol,
-                            uint16_t* _rgbRow,
-                            const uint32_t _rgb888)
+    void __attribute__((always_inline)) FAST_writeRgbPixel(TrikCvImageDimension _srcCol,
+                                                           uint16_t* _rgbRow,
+                                                           const uint32_t _rgb888)
     {
       assert(_srcCol < m_srcToDstColConv.size());
       const TrikCvImageDimension dstCol = m_srcToDstColConv[_srcCol];
@@ -293,10 +299,12 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
       _rgbRow[dstCol] = ((_rgb888>>19)&0x001f) | ((_rgb888>>5)&0x07e0) | ((_rgb888<<8)&0xf800);
     }
 
-    void drawRgbPixel(TrikCvImageDimension _srcCol,
-                      TrikCvImageDimension _srcRow,
-                      const TrikCvImageBuffer& _outImage,
-                      const XDAS_UInt8 _r, const XDAS_UInt8 _g, const XDAS_UInt8 _b)
+    void __attribute__((always_inline)) drawRgbPixel(TrikCvImageDimension _srcCol,
+                                                     TrikCvImageDimension _srcRow,
+                                                     const TrikCvImageBuffer& _outImage,
+                                                     const XDAS_UInt8 _r,
+                                                     const XDAS_UInt8 _g,
+                                                     const XDAS_UInt8 _b)
     {
       assert(_srcRow < m_srcToDstRowConv.size());
       const TrikCvImageDimension dstRow = m_srcToDstRowConv[_srcRow];
@@ -309,10 +317,12 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
       writeRgbPixel(rgbPtr, _r, _g, _b);
     }
 
-    void drawRgbTargetCross(TrikCvImageDimension _srcCol,
-                            TrikCvImageDimension _srcRow,
-                            const TrikCvImageBuffer& _outImage,
-                            const XDAS_UInt8 _r, const XDAS_UInt8 _g, const XDAS_UInt8 _b)
+    void __attribute__((always_inline)) drawRgbTargetCross(TrikCvImageDimension _srcCol,
+                                                           TrikCvImageDimension _srcRow,
+                                                           const TrikCvImageBuffer& _outImage,
+                                                           const XDAS_UInt8 _r,
+                                                           const XDAS_UInt8 _g,
+                                                           const XDAS_UInt8 _b)
     {
       for (int adj = 10; adj < 20; ++adj)
       {
@@ -356,10 +366,12 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
     }
 
 
-    void proceedRgbPixel(const TrikCvImageDimension _srcCol,
-                         const TrikCvImageDimension _srcRow,
-                         XDAS_UInt16* _rgbRow,
-                         const XDAS_UInt8 _r, const XDAS_UInt8 _g, const XDAS_UInt8 _b)
+    void __attribute__((always_inline)) proceedRgbPixel(const TrikCvImageDimension _srcCol,
+                                                        const TrikCvImageDimension _srcRow,
+                                                        XDAS_UInt16* _rgbRow,
+                                                        const XDAS_UInt8 _r,
+                                                        const XDAS_UInt8 _g,
+                                                        const XDAS_UInt8 _b)
     {
       if (testifyRgbPixel(_r, _g, _b))
       {
@@ -402,10 +414,10 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
     }
 
 
-    void proceedTwoYuyvPixels(const XDAS_UInt32 _yuyv,
-                              const TrikCvImageDimension _srcCol,
-                              const TrikCvImageDimension _srcRow,
-                              XDAS_UInt16* _rgbRow)
+    void __attribute__((always_inline)) proceedTwoYuyvPixels(const XDAS_UInt32 _yuyv,
+                                                             const TrikCvImageDimension _srcCol,
+                                                             const TrikCvImageDimension _srcRow,
+                                                             XDAS_UInt16* _rgbRow)
     {
 
 #if 0
