@@ -43,7 +43,7 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
     std::vector<uint16_t> m_srcToDstRowConv;
 
 
-    void static __attribute__((always_inline)) writeRgb565Pixel(uint16_t* _rgb565ptr,
+    void static __attribute__((always_inline)) writeRgb565Pixel(uint16_t* restrict _rgb565ptr,
                                                                 const uint32_t _rgb888)
     {
       *_rgb565ptr = ((_rgb888>>19)&0x001f) | ((_rgb888>>5)&0x07e0) | ((_rgb888<<8)&0xf800);
@@ -115,7 +115,7 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
                                       const uint16_t _srcRow,
                                       const uint32_t _hsv,
                                       uint32_t _rgb888,
-                                      uint16_t* _rgb565)
+                                      uint16_t* restrict _rgb565)
     {
       const uint64_t u64_hsv_range         = m_detectRange;
       const uint8_t  u8_hsv_det            = (  _cmpgtu4(_hsv, _hill(u64_hsv_range))
@@ -162,7 +162,7 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
     }
 
     static void DEBUG_INLINE convertRgb888ToHsv(const uint32_t _rgb888,
-                                                uint32_t* _hsv)
+                                                uint32_t* restrict _hsv)
     {
       const uint32_t u32_rgb_or16    = _unpkhu4(_rgb888);
       const uint32_t u32_rgb_gb16    = _unpklu4(_rgb888);
@@ -207,7 +207,7 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
 
     void DEBUG_INLINE convertImageYuyvToRgb888(const TrikCvImageBuffer& _inImage)
     {
-      const int8_t* srcImageRow = _inImage.m_ptr;
+      const int8_t* restrict srcImageRow = _inImage.m_ptr;
       uint64_t* restrict rgb2x888ptr = reinterpret_cast<uint64_t*>(s_rgb888);
 
       assert(m_inImageDesc.m_height % 4 == 0); // verified in setup
