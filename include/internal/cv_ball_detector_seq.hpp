@@ -117,10 +117,8 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
                                                               const uint64_t _hsv_range,
                                                               const uint8_t  _hsv_expect)
     {
-      const uint8_t  u8_hsv_det = (  _cmpgtu4(_hsv, _hill(_hsv_range))
-                                   | _cmpeq4( _hsv, _hill(_hsv_range)))
-                                & (  _cmpltu4(_hsv, _loll(_hsv_range))
-                                   | _cmpeq4( _hsv, _loll(_hsv_range)));
+      const uint8_t  u8_hsv_det = _cmpltu4(_hsv, _hill(_hsv_range))
+                                | _cmpgtu4(_hsv, _loll(_hsv_range));
 
       return (u8_hsv_det == _hsv_expect);
     }
@@ -388,14 +386,14 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
       {
         m_detectRange = _itoll((detectValFrom<<16) | (detectSatFrom<<8) | detectHueFrom,
                                (detectValTo  <<16) | (detectSatTo  <<8) | detectHueTo  );
-        m_detectExpected = 0x8|0x7; // top byte is always compare equal
+        m_detectExpected = 0x0;
       }
       else
       {
         assert(detectHueFrom > 0 && detectHueTo < 255);
         m_detectRange = _itoll((detectValFrom<<16) | (detectSatFrom<<8) | (detectHueTo  +1),
                                (detectValTo  <<16) | (detectSatTo  <<8) | (detectHueFrom-1));
-        m_detectExpected = 0x8|0x6; // top byte is always compare equal
+        m_detectExpected = 0x1;
       }
 
       if (m_inImageDesc.m_width > 0 && m_inImageDesc.m_height > 0)

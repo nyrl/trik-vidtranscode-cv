@@ -149,10 +149,8 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
 
       const uint32_t u32_hsv               = _packh4(u32_hsv_ooo_val_x256, u32_hsv_sat_hue_x256);
       const uint64_t u64_hsv_range         = m_detectRange;
-      const uint8_t  u8_hsv_det            = (  _cmpgtu4(u32_hsv, _hill(u64_hsv_range))
-                                              | _cmpeq4( u32_hsv, _hill(u64_hsv_range)))
-                                           & (  _cmpltu4(u32_hsv, _loll(u64_hsv_range))
-                                              | _cmpeq4( u32_hsv, _loll(u64_hsv_range)));
+      const uint8_t  u8_hsv_det            = _cmpltu4(u32_hsv, _hill(u64_hsv_range))
+                                           | _cmpgtu4(u32_hsv, _loll(u64_hsv_range));
 
       // SCORE cf5dee: 2.541, 2.485, 2.526, 2.471, 2.514
       if (u8_hsv_det != m_detectExpected)
@@ -270,14 +268,14 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
       {
         m_detectRange = _itoll((detectValFrom<<16) | (detectSatFrom<<8) | detectHueFrom,
                                (detectValTo  <<16) | (detectSatTo  <<8) | detectHueTo  );
-        m_detectExpected = 0x8|0x7; // top byte is always compare equal
+        m_detectExpected = 0x0;
       }
       else
       {
         assert(detectHueFrom > 0 && detectHueTo < 255);
         m_detectRange = _itoll((detectValFrom<<16) | (detectSatFrom<<8) | (detectHueTo  +1),
                                (detectValTo  <<16) | (detectSatTo  <<8) | (detectHueFrom-1));
-        m_detectExpected = 0x8|0x6; // top byte is always compare equal
+        m_detectExpected = 0x1;
       }
 
 
