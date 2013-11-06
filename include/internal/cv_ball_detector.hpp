@@ -77,9 +77,9 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
     std::vector<XDAS_UInt16> m_mult255_div;
     std::vector<XDAS_UInt16> m_mult43_div;
 
-    bool DEBUG_INLINE testifyRgbPixel(const XDAS_UInt8 _r,
-                                      const XDAS_UInt8 _g,
-                                      const XDAS_UInt8 _b)
+    bool __attribute__((always_inline)) testifyRgbPixel(const XDAS_UInt8 _r,
+                                                        const XDAS_UInt8 _g,
+                                                        const XDAS_UInt8 _b)
     {
       XDAS_UInt8 max;
       XDAS_UInt8 med;
