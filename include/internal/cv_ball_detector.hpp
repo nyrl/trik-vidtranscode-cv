@@ -587,17 +587,20 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
       } // repeat
 #endif
 
-      const TrikCvImageDimension inImagePixels = m_inImageDesc.m_width * m_inImageDesc.m_height;
+      const XDAS_UInt32 inImagePixels = m_inImageDesc.m_width * m_inImageDesc.m_height;
       if (inImagePixels > 0)
-        _outArgs.targetMass = (m_targetPoints * 10000)/ inImagePixels; // scaling to 0..10000
+        _outArgs.targetMass = (static_cast<XDAS_UInt32>(m_targetPoints) * static_cast<XDAS_UInt32>(10000))
+                            / inImagePixels; // scaling to 0..10000
       else
         _outArgs.targetMass = 0;
 
       if (m_targetPoints > 0)
       {
-        drawRgbTargetCross(m_targetX / m_targetPoints, m_targetY / m_targetPoints, _outImage, 0xff, 0x00, 0xff);
-        _outArgs.targetX = (((m_targetX / m_targetPoints) - m_inImageDesc.m_width/2)  * 100*2) / m_inImageDesc.m_width;
-        _outArgs.targetY = (((m_targetY / m_targetPoints) - m_inImageDesc.m_height/2) * 100*2) / m_inImageDesc.m_height;
+        XDAS_Int32 targetX = m_targetX/m_targetPoints;
+        XDAS_Int32 targetY = m_targetY/m_targetPoints;
+        drawRgbTargetCross(targetX, targetY, _outImage, 0xff, 0x00, 0xff);
+        _outArgs.targetX = ((targetX - static_cast<XDAS_Int32>(m_inImageDesc.m_width) /2) * 100*2) / static_cast<XDAS_Int32>(m_inImageDesc.m_width);
+        _outArgs.targetY = ((targetY - static_cast<XDAS_Int32>(m_inImageDesc.m_height)/2) * 100*2) / static_cast<XDAS_Int32>(m_inImageDesc.m_height);
       }
       else
       {
