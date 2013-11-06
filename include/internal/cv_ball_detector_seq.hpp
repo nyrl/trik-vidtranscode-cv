@@ -198,7 +198,9 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
       const int8_t* restrict srcImageRow = _inImage.m_ptr;
       uint64_t* restrict rgb2x888ptr = reinterpret_cast<uint64_t*>(s_rgb888);
       uint64_t* restrict hsvx2ptr    = reinterpret_cast<uint64_t*>(s_hsv);
-      const uint16_t height = m_inImageDesc.m_height;
+      const uint16_t height     = m_inImageDesc.m_height;
+      const uint32_t lineLength = m_inImageDesc.m_lineLength;
+      const uint16_t widthxu16  = m_inImageDesc.m_width*sizeof(uint16_t);
 
       assert(m_inImageDesc.m_height % 4 == 0); // verified in setup
 #pragma MUST_ITERATE(4, ,4)
@@ -206,7 +208,7 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
       {
         assert(reinterpret_cast<intptr_t>(srcImageRow) % 8 == 0); // let's pray...
         const uint64_t* restrict srcImagex2 = reinterpret_cast<const uint64_t*>(srcImageRow);
-        const uint64_t* restrict srcImagex2To = reinterpret_cast<const uint64_t*>(srcImageRow + m_inImageDesc.m_width*sizeof(uint16_t));
+        const uint64_t* restrict srcImagex2To = reinterpret_cast<const uint64_t*>(srcImageRow + widthxu16);
 
         assert(m_inImageDesc.m_width % 32 == 0); // verified in setup
         assert(srcImagex2To-srcImagex2 == m_inImageDesc.m_width/4); // should be so...
@@ -226,7 +228,7 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
                                convertRgb888ToHsv(_loll(rgb34)));
         }
 
-        srcImageRow += m_inImageDesc.m_lineLength;
+        srcImageRow += lineLength;
       }
     }
 #else
@@ -234,11 +236,13 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
     {
       const int8_t* restrict srcImageRow = _inImage.m_ptr;
       uint64_t* restrict rgb2x888ptr = reinterpret_cast<uint64_t*>(s_rgb888);
-      const uint16_t width4 = m_inImageDesc.m_width/4;
+      const uint16_t height     = m_inImageDesc.m_height;
+      const uint32_t lineLength = m_inImageDesc.m_lineLength;
+      const uint16_t width4     = m_inImageDesc.m_width/4;
 
       assert(m_inImageDesc.m_height % 4 == 0); // verified in setup
 #pragma MUST_ITERATE(4, ,4)
-      for (uint16_t srcRow=0; srcRow < m_inImageDesc.m_height; srcRow+=1)
+      for (uint16_t srcRow=0; srcRow < height; srcRow+=1)
       {
         assert(reinterpret_cast<intptr_t>(srcImageRow) % 8 == 0); // let's pray...
         const uint64_t* restrict srcImagex2 = reinterpret_cast<const uint64_t*>(srcImageRow);
@@ -252,7 +256,7 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
           *rgb2x888ptr++ = convert2xYuyvToRgb888(_hill(yuyv2x));
         }
 
-        srcImageRow += m_inImageDesc.m_lineLength;
+        srcImageRow += lineLength;
       }
     }
 
@@ -277,21 +281,22 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
     {
       const uint64_t* restrict rgb888x2ptr = reinterpret_cast<uint64_t*>(s_rgb888);
       const uint64_t* restrict hsvx2ptr    = reinterpret_cast<uint64_t*>(s_hsv);
-      const uint16_t width  = m_inImageDesc.m_width;
-      const uint16_t height = m_inImageDesc.m_height;
+      const uint16_t width      = m_inImageDesc.m_width;
+      const uint16_t height     = m_inImageDesc.m_height;
+      const uint32_t lineLength = m_inImageDesc.m_lineLength;
       const uint64_t u64_hsv_range = m_detectRange;
       const uint8_t  u8_hsv_expect = m_detectExpected;
       int32_t  targetX = 0;
       int32_t  targetY = 0;
       uint32_t targetPoints = 0;
 
-      assert(height % 4 == 0); // verified in setup
+      assert(m_inImageDesc.m_height % 4 == 0); // verified in setup
 #pragma MUST_ITERATE(4, ,4)
       for (uint16_t srcRow=0; srcRow < height; ++srcRow)
       {
         assert(srcRow < m_srcToDstRowConv.size());
         const uint16_t dstRow = m_srcToDstRowConv[srcRow];
-        const uint32_t dstRowOfs = dstRow*m_outImageDesc.m_lineLength;
+        const uint32_t dstRowOfs = dstRow*lineLength;
         uint16_t* restrict dstImageRow = reinterpret_cast<uint16_t*>(_outImage.m_ptr + dstRowOfs);
 
         assert(m_inImageDesc.m_width % 32 == 0); // verified in setup
