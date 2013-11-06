@@ -135,7 +135,7 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
     }
 
     static void DEBUG_INLINE convert2xYuyvToRgb888(const uint32_t _yuyv,
-                                                   uint32_t* _rgb888ptr)
+                                                   uint64_t* _rgb2x888ptr)
     {
       const int64_t  s64_yuyv1   = _mpyu4ll(_yuyv,
                                              (static_cast<uint32_t>(static_cast<uint8_t>(409/4))<<24)
@@ -158,8 +158,7 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
       const uint32_t u32_rgb_p2l =      _shr2(_add2(u32_rgb_l, u32_y2y2), 6);
       const uint32_t u32_rgb_p1 = _spacku4(u32_rgb_p1h, u32_rgb_p1l);
       const uint32_t u32_rgb_p2 = _spacku4(u32_rgb_p2h, u32_rgb_p2l);
-      *_rgb888ptr++ = u32_rgb_p1;
-      *_rgb888ptr++ = u32_rgb_p2;
+      *_rgb2x888ptr = _itoll(u32_rgb_p2, u32_rgb_p1);
     }
 
     static void DEBUG_INLINE convertRgb888ToHsv(const uint32_t _rgb888,
@@ -209,22 +208,24 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
     void DEBUG_INLINE convertImageYuyvToRgb888(const TrikCvImageBuffer& _inImage)
     {
       const int8_t* srcImageRow = _inImage.m_ptr;
-      uint32_t* rgb888ptr = s_rgb888;
+      uint64_t* rgb2x888ptr = reinterpret_cast<uint64_t*>(s_rgb888);
 
       assert(m_inImageDesc.m_height % 4 == 0); // verified in setup
-#pragma MUST_ITERATE(, ,4)
+#pragma MUST_ITERATE(4, ,4)
       for (uint16_t srcRow=0; srcRow < m_inImageDesc.m_height; srcRow+=1)
       {
-        const uint32_t* srcImage = reinterpret_cast<const uint32_t*>(srcImageRow);
+        assert(reinterpret_cast<intptr_t>(srcImageRow) % 8 == 0); // let's pray...
+        const uint64_t* srcImagex2 = reinterpret_cast<const uint64_t*>(srcImageRow);
 
         assert(m_inImageDesc.m_width % 32 == 0); // verified in setup
-#pragma MUST_ITERATE(, ,32/2)
-        for (uint16_t srcCol=0; srcCol < m_inImageDesc.m_width; srcCol+=2)
+#pragma MUST_ITERATE(32/4, ,32/4)
+        for (uint16_t remains = m_inImageDesc.m_width/4; remains > 0; --remains)
         {
-          convert2xYuyvToRgb888(*srcImage, rgb888ptr);
-          srcImage  += 1;
-          rgb888ptr += 2;
+          const uint64_t yuyv2x = *srcImagex2++;
+          convert2xYuyvToRgb888(_loll(yuyv2x), rgb2x888ptr++);
+          convert2xYuyvToRgb888(_hill(yuyv2x), rgb2x888ptr++);
         }
+
         srcImageRow += m_inImageDesc.m_lineLength;
       }
     }
@@ -235,7 +236,7 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
       uint32_t* hsvptr = s_hsv;
       const uint32_t dim = m_inImageDesc.m_width*m_inImageDesc.m_height;
       assert(dim % (32*4) == 0); // m_width%32, m_height%4
-#pragma MUST_ITERATE(, ,32)
+#pragma MUST_ITERATE(32*4, ,32*4)
       for (uint32_t i = 0; i < dim; ++i)
         convertRgb888ToHsv(*rgb888ptr++, hsvptr++);
     }
@@ -246,7 +247,7 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
       const uint32_t* hsvptr = s_hsv;
 
       assert(m_inImageDesc.m_height % 4 == 0); // verified in setup
-#pragma MUST_ITERATE(, ,4)
+#pragma MUST_ITERATE(4, ,4)
       for (uint16_t srcRow=0; srcRow < m_inImageDesc.m_height; ++srcRow)
       {
         assert(srcRow < m_srcToDstRowConv.size());
@@ -255,7 +256,7 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
         uint16_t* dstImageRow = reinterpret_cast<uint16_t*>(_outImage.m_ptr + dstRowOfs);
 
         assert(m_inImageDesc.m_width % 32 == 0); // verified in setup
-#pragma MUST_ITERATE(, ,32)
+#pragma MUST_ITERATE(32, ,32)
         for (uint16_t srcCol=0; srcCol < m_inImageDesc.m_width; ++srcCol)
         {
           assert(_srcCol < m_srcToDstColConv.size());
@@ -335,9 +336,12 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
         m_detectExpected = 0x8|0x6; // top byte is always compare equal
       }
 
-      convertImageYuyvToRgb888(_inImage);
-      convertImageRgb888ToHsv();
-      proceedImageHsv(_outImage);
+      if (m_inImageDesc.m_width > 0 && m_inImageDesc.m_height > 0)
+      {
+        convertImageYuyvToRgb888(_inImage);
+        convertImageRgb888ToHsv();
+        proceedImageHsv(_outImage);
+      }
 
 #ifdef DEBUG_REPEAT
       } // repeat
