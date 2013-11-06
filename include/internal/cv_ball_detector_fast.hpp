@@ -39,11 +39,10 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
 
     uint16_t m_mult_div_43_255[(1u<<8)*2];
 
-    void static __attribute__((always_inline)) writeRgb565Pixel(uint16_t* _rgb565ptr,
+    void static __attribute__((always_inline)) writeRgb565Pixel(uint16_t* restrict _rgb565ptr,
                                                                 const uint32_t _rgb888)
     {
-      const uint32_t rgb888filt = _rgb888 & 0x1f3f1f;
-      *_rgb565ptr = (rgb888filt>>19) | (rgb888filt>>5) | (rgb888filt<<8);
+      *_rgb565ptr = ((_rgb888>>19)&0x001f) | ((_rgb888>>5)&0x07e0) | ((_rgb888<<8)&0xf800);
     }
 
     void __attribute__((always_inline)) drawRgbPixel(uint16_t _srcCol,
