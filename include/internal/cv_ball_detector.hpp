@@ -652,14 +652,12 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
     }
 
 
-    void __attribute__((always_inline)) proceedTwoYuyvPixels(const XDAS_UInt32 _yuyv,
-                                                             const TrikCvImageDimension _srcCol,
-                                                             const TrikCvImageDimension _srcRow,
-                                                             XDAS_UInt16* _rgbRow)
+    // reference implementation
+    void __attribute__((deprecated)) DEPRECATED_proceedTwoYuyvPixels(const XDAS_UInt32 _yuyv,
+                                                                     const TrikCvImageDimension _srcCol,
+                                                                     const TrikCvImageDimension _srcRow,
+                                                                     XDAS_UInt16* _rgbRow)
     {
-
-#if 0
-      // reference implementation
       typedef XDAS_Int16 Int16;
       union YUYV
       {
@@ -692,28 +690,6 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
 
       const Int16 y1c = static_cast<Int16>(298/4) * y1;
       const Int16 y2c = static_cast<Int16>(298/4) * y2;
-
-#else
-      // hopefully optimized implementation
-      const XDAS_Int16 y1 = static_cast<XDAS_Int16>((_yuyv      ) & 0xff);
-      const XDAS_Int16 u  = static_cast<XDAS_Int16>((_yuyv >>  8) & 0xff);
-      const XDAS_Int16 y2 = static_cast<XDAS_Int16>((_yuyv >> 16) & 0xff);
-      const XDAS_Int16 v  = static_cast<XDAS_Int16>((_yuyv >> 24) & 0xff);
-
-      const XDAS_Int16 r12 =
-                           + static_cast<XDAS_Int16>(409/4) * v
-                           + static_cast<XDAS_Int16>(128/4 + (-128*409-16*298)/4);
-      const XDAS_Int16 g12 =
-                           - static_cast<XDAS_Int16>(100/4) * u
-                           - static_cast<XDAS_Int16>(208/4) * v
-                           + static_cast<XDAS_Int16>(128/4 + (+128*100+128*208-16*298)/4);
-      const XDAS_Int16 b12 =
-                           + static_cast<XDAS_Int16>(516/4) * u
-                           + static_cast<XDAS_Int16>(128/4 + (-128*516-16*298)/4);
-
-      const XDAS_Int16 y1c = static_cast<XDAS_Int16>(298/4) * y1;
-      const XDAS_Int16 y2c = static_cast<XDAS_Int16>(298/4) * y2;
-#endif
 
       proceedRgbPixel(_srcCol+0, _srcRow, _rgbRow,
                       range<XDAS_Int16>(0, (r12 + y1c) >> 6, 255),
