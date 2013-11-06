@@ -46,8 +46,8 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
       *_rgb565ptr = ((_rgb888>>19)&0x001f) | ((_rgb888>>5)&0x07e0) | ((_rgb888<<8)&0xf800);
     }
 
-    void __attribute__((always_inline)) drawRgbPixel(uint16_t _srcCol,
-                                                     uint16_t _srcRow,
+    void __attribute__((always_inline)) drawRgbPixel(const uint16_t _srcCol,
+                                                     const uint16_t _srcRow,
                                                      const TrikCvImageBuffer& _outImage,
                                                      const uint32_t _rgb888) const
     {
@@ -62,8 +62,8 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
       writeRgb565Pixel(rgbPtr, _rgb888);
     }
 
-    void __attribute__((always_inline)) drawRgbTargetCross(int16_t _srcCol,
-                                                           int16_t _srcRow,
+    void __attribute__((always_inline)) drawRgbTargetCross(const int16_t _srcCol,
+                                                           const int16_t _srcRow,
                                                            const TrikCvImageBuffer& _outImage,
                                                            const uint32_t _rgb888) const
     {

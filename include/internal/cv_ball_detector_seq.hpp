@@ -21,8 +21,8 @@
 
 
 
-static uint16_t s_mult255_div[(1u<<8)];
 static uint16_t s_mult43_div[(1u<<8)];
+static uint16_t s_mult255_div[(1u<<8)];
 static uint32_t s_rgb888[640*480];
 static uint32_t s_hsv[640*480];
 
@@ -51,8 +51,8 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
       *_rgb565ptr = ((_rgb888>>19)&0x001f) | ((_rgb888>>5)&0x07e0) | ((_rgb888<<8)&0xf800);
     }
 
-    void __attribute__((always_inline)) drawRgbPixel(uint16_t _srcCol,
-                                                     uint16_t _srcRow,
+    void __attribute__((always_inline)) drawRgbPixel(const uint16_t _srcCol,
+                                                     const uint16_t _srcRow,
                                                      const TrikCvImageBuffer& _outImage,
                                                      const uint32_t _rgb888) const
     {
@@ -63,7 +63,7 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
       const uint16_t dstCol = m_srcToDstColConv[_srcCol];
 
       const uint32_t dstOfs = dstRow*m_outImageDesc.m_lineLength + dstCol*sizeof(uint16_t);
-      uint16_t* rgbPtr = reinterpret_cast<uint16_t*>(_outImage.m_ptr + dstOfs);
+      uint16_t* restrict rgbPtr = reinterpret_cast<uint16_t*>(_outImage.m_ptr + dstOfs);
       writeRgb565Pixel(rgbPtr, _rgb888);
     }
 
@@ -342,18 +342,18 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
 
       m_srcToDstColConv.resize(m_inImageDesc.m_width);
       for (uint16_t srcCol=0; srcCol < m_srcToDstColConv.size(); ++srcCol)
-        m_srcToDstColConv[srcCol] = (srcCol*m_outImageDesc.m_width) / m_inImageDesc.m_width;
+        m_srcToDstColConv[srcCol] = (srcCol*m_outImageDesc.m_width) / m_inImageDesc.m_width; // m_width > 0 if came here
 
       m_srcToDstRowConv.resize(m_inImageDesc.m_height);
       for (uint16_t srcRow=0; srcRow < m_srcToDstRowConv.size(); ++srcRow)
-        m_srcToDstRowConv[srcRow] = (srcRow*m_outImageDesc.m_height) / m_inImageDesc.m_height;
+        m_srcToDstRowConv[srcRow] = (srcRow*m_outImageDesc.m_height) / m_inImageDesc.m_height; // m_height > 0 if came here
 
-      s_mult255_div[0] = 0;
       s_mult43_div[0] = 0;
+      s_mult255_div[0] = 0;
       for (uint16_t idx = 1; idx < (1u<<8); ++idx)
       {
-        s_mult255_div[idx] = (255u * (1u<<8)) / idx;
         s_mult43_div[ idx] = (43u  * (1u<<8)) / idx;
+        s_mult255_div[idx] = (255u * (1u<<8)) / idx;
       }
 
       return true;
@@ -368,20 +368,16 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
         return false;
       _outImage.m_size = m_outImageDesc.m_height * m_outImageDesc.m_lineLength;
 
+      m_targetX = 0;
+      m_targetY = 0;
+      m_targetPoints = 0;
+
       uint8_t detectHueFrom = range<int16_t>(0, (_inArgs.detectHueFrom * 255) / 359, 255); // scaling 0..359 to 0..255
       uint8_t detectHueTo   = range<int16_t>(0, (_inArgs.detectHueTo   * 255) / 359, 255); // scaling 0..359 to 0..255
       uint8_t detectSatFrom = range<int16_t>(0, (_inArgs.detectSatFrom * 255) / 100, 255); // scaling 0..100 to 0..255
       uint8_t detectSatTo   = range<int16_t>(0, (_inArgs.detectSatTo   * 255) / 100, 255); // scaling 0..100 to 0..255
       uint8_t detectValFrom = range<int16_t>(0, (_inArgs.detectValFrom * 255) / 100, 255); // scaling 0..100 to 0..255
       uint8_t detectValTo   = range<int16_t>(0, (_inArgs.detectValTo   * 255) / 100, 255); // scaling 0..100 to 0..255
-
-#ifdef DEBUG_REPEAT
-      for (unsigned repeat = 0; repeat < DEBUG_REPEAT; ++repeat) {
-#endif
-
-      m_targetX = 0;
-      m_targetY = 0;
-      m_targetPoints = 0;
 
       if (detectHueFrom <= detectHueTo)
       {
@@ -397,7 +393,12 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
         m_detectExpected = 0x1;
       }
 
-      if (m_inImageDesc.m_width > 0 && m_inImageDesc.m_height > 0)
+
+#ifdef DEBUG_REPEAT
+      for (unsigned repeat = 0; repeat < DEBUG_REPEAT; ++repeat) {
+#endif
+
+      if (m_inImageDesc.m_height > 0 && m_inImageDesc.m_width > 0)
       {
 #ifdef DEBUG_COMBINE_YUYV_RGB_HSV
         convertImageYuyvToHsv(_inImage);
