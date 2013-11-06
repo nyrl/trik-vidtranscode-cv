@@ -111,27 +111,16 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
       }
     }
 
-    void DEBUG_INLINE proceedHsvPixel(const uint16_t _srcCol,
-                                      const uint16_t _srcRow,
-                                      const uint32_t _hsv,
-                                      uint32_t _rgb888,
-                                      uint16_t* restrict _rgb565)
+    bool static __attribute__((always_inline)) detectHsvPixel(const uint32_t _hsv,
+                                                              const uint64_t _hsv_range,
+                                                              const uint8_t  _hsv_expect)
     {
-      const uint64_t u64_hsv_range         = m_detectRange;
-      const uint8_t  u8_hsv_det            = (  _cmpgtu4(_hsv, _hill(u64_hsv_range))
-                                              | _cmpeq4( _hsv, _hill(u64_hsv_range)))
-                                           & (  _cmpltu4(_hsv, _loll(u64_hsv_range))
-                                              | _cmpeq4( _hsv, _loll(u64_hsv_range)));
+      const uint8_t  u8_hsv_det = (  _cmpgtu4(_hsv, _hill(_hsv_range))
+                                   | _cmpeq4( _hsv, _hill(_hsv_range)))
+                                & (  _cmpltu4(_hsv, _loll(_hsv_range))
+                                   | _cmpeq4( _hsv, _loll(_hsv_range)));
 
-      if (u8_hsv_det == m_detectExpected)
-      {
-        m_targetX += _srcCol;
-        m_targetY += _srcRow;
-        ++m_targetPoints;
-        _rgb888 = 0xffff00;
-      }
-
-      writeRgb565Pixel(_rgb565, _rgb888);
+      return (u8_hsv_det == _hsv_expect);
     }
 
     static void DEBUG_INLINE convert2xYuyvToRgb888(const uint32_t _yuyv,
@@ -249,6 +238,11 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
     {
       const uint32_t* restrict rgb888ptr = s_rgb888;
       const uint32_t* restrict hsvptr = s_hsv;
+      const uint64_t u64_hsv_range = m_detectRange;
+      const uint8_t  u8_hsv_expect = m_detectExpected;
+      int32_t  targetX = 0;
+      int32_t  targetY = 0;
+      uint32_t targetPoints = 0;
 
       assert(m_inImageDesc.m_height % 4 == 0); // verified in setup
 #pragma MUST_ITERATE(4, ,4)
@@ -263,12 +257,23 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
 #pragma MUST_ITERATE(32, ,32)
         for (uint16_t srcCol=0; srcCol < m_inImageDesc.m_width; ++srcCol)
         {
+          uint32_t rgb888 = *rgb888ptr++;
+          if (detectHsvPixel(*hsvptr++, u64_hsv_range, u8_hsv_expect))
+          {
+            targetX += srcCol;
+            targetY += srcRow;
+            targetPoints += 1;
+            rgb888 = 0xffff00;
+          }
+
           assert(_srcCol < m_srcToDstColConv.size());
           const uint16_t dstCol = m_srcToDstColConv[srcCol];
-          uint16_t* restrict dstImagePix = &dstImageRow[dstCol];
-          proceedHsvPixel(srcCol, srcRow, *hsvptr++, *rgb888ptr++, dstImagePix);
+          writeRgb565Pixel(dstImageRow+dstCol, rgb888);
         }
       }
+      m_targetX = targetX;
+      m_targetY = targetY;
+      m_targetPoints = targetPoints;
     }
 
   public:
