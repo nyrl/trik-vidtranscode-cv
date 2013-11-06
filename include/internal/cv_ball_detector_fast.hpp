@@ -57,7 +57,7 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
       const uint16_t dstCol = m_srcToDstColConv[_srcCol];
 
       const uint32_t dstOfs = dstRow*m_outImageDesc.m_lineLength + dstCol*sizeof(uint16_t);
-      uint16_t* rgbPtr = reinterpret_cast<uint16_t*>(_outImage.m_ptr + dstOfs);
+      uint16_t* restrict rgbPtr = reinterpret_cast<uint16_t*>(_outImage.m_ptr + dstOfs);
       writeRgb565Pixel(rgbPtr, _rgb888);
     }
 
@@ -164,7 +164,7 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
 
     void DEBUG_INLINE proceedRgbPixel(const uint16_t _srcRow,
                                       const uint16_t _srcCol,
-                                      uint16_t* _dstImagePix,
+                                      uint16_t* restrict _dstImagePix,
                                       const uint32_t _rgb888)
     {
       uint32_t out_rgb888 = _rgb888;
@@ -182,8 +182,8 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
     void DEBUG_INLINE proceedTwoYuyvPixels(const uint16_t _srcRow,
                                            const uint16_t _srcCol1,
                                            const uint16_t _srcCol2,
-                                           uint16_t* _dstImagePix1,
-                                           uint16_t* _dstImagePix2,
+                                           uint16_t* restrict _dstImagePix1,
+                                           uint16_t* restrict _dstImagePix2,
                                            const uint32_t _yuyv)
     {
       const int64_t  s64_yuyv1   = _mpyu4ll(_yuyv,
@@ -294,11 +294,11 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
           assert(srcRow < m_srcToDstRowConv.size());
           const uint16_t dstRow = m_srcToDstRowConv[srcRow];
 
-          const uint32_t  srcRowOfs = srcRow*m_inImageDesc.m_lineLength;
-          const uint32_t* srcImage  = reinterpret_cast<uint32_t*>(_inImage.m_ptr + srcRowOfs);
+          const uint32_t  srcRowOfs          = srcRow*m_inImageDesc.m_lineLength;
+          const uint32_t* restrict srcImage  = reinterpret_cast<uint32_t*>(_inImage.m_ptr + srcRowOfs);
 
-          const uint32_t dstRowOfs   = dstRow*m_outImageDesc.m_lineLength;
-          uint16_t*      dstImageRow = reinterpret_cast<uint16_t*>(_outImage.m_ptr + dstRowOfs);
+          const uint32_t dstRowOfs       = dstRow*m_outImageDesc.m_lineLength;
+          uint16_t* restrict dstImageRow = reinterpret_cast<uint16_t*>(_outImage.m_ptr + dstRowOfs);
 
           assert(m_inImageDesc.m_width % 32 == 0); // verified in setup
 #pragma MUST_ITERATE(32/2,,32/2)
@@ -307,8 +307,8 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
             assert(_srcCol+1 < m_srcToDstColConv.size());
             const uint16_t dstCol1 = m_srcToDstColConv[srcCol+0];
             const uint16_t dstCol2 = m_srcToDstColConv[srcCol+1];
-            uint16_t* dstImagePix1 = &dstImageRow[dstCol1];
-            uint16_t* dstImagePix2 = &dstImageRow[dstCol2];
+            uint16_t* restrict dstImagePix1 = &dstImageRow[dstCol1]; // even if they point the same place, we don't really care
+            uint16_t* restrict dstImagePix2 = &dstImageRow[dstCol2];
             proceedTwoYuyvPixels(srcRow, srcCol+0, srcCol+1, dstImagePix1, dstImagePix2, *srcImage++);
           }
         }
