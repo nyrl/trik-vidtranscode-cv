@@ -46,6 +46,7 @@ class BallDetector : public CVAlgorithm,
 //#define DEBUG_FAST_TESTIFY_V1
 #define DEBUG_FAST_TESTIFY_V2
 //#define DEBUG_FAST_TESTIFY_V3
+//#define DEBUG_FAST_TESTIFY_V4
 //#define DEBUG_REPEAT 20
 
 static uint16_t s_FAST_mult255_div[(1u<<8)];
@@ -193,6 +194,100 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
       return hsv_h_det && hsv_v_det && hsv_s_det;
     }
 
+#ifdef DEBUG_FAST_TESTIFY_V4
+    bool DEBUG_INLINE FAST_testifyRgbPixel(const uint32_t _rgb888,
+                                           uint32_t& _out_rgb888) const
+    {
+      union
+      {
+        struct {
+          uint8_t b;
+          uint8_t g;
+          uint8_t r;
+          uint8_t unused;
+        } p32;
+        uint32_t u32;
+      } rgb888;
+      rgb888.u32 = _rgb888;
+
+      const uint32_t u32_rgb_min2 = _minu4(_rgb888, _rgb888>>8);
+      const uint32_t u32_rgb_max2 = _maxu4(_rgb888, _rgb888>>8);
+      const uint16_t u16_rgb_min  =      _minu4(u32_rgb_min2, u32_rgb_min2>>8);         // top 3 bytes are zeroes
+      const uint16_t u16_rgb_max  = _clr(_maxu4(u32_rgb_max2, u32_rgb_max2>>8), 8, 31); // top 3 bytes were non-zeroes!
+
+#if 0
+      const uint16_t u16_rgb_delta = u16_rgb_max-u16_rgb_min;
+
+      const uint32_t hsv_v = u16_rgb_max;
+      const bool hsv_v_det = (m_detectValFrom <= hsv_v) && (m_detectValTo >= hsv_v);
+
+      /* optimized by table based multiplication with power-2 divisor, simulate 255*(max-min)/max */
+      const uint16_t hsv_s = (  static_cast<uint16_t>(s_FAST_mult255_div[u16_rgb_max])
+                              * static_cast<uint16_t>(u16_rgb_delta)) >> 8;
+      const bool hsv_s_det = (m_detectSatFrom <= hsv_s) && (m_detectSatTo >= hsv_s);
+
+      /* optimized by table based multiplication with power-2 divisor, simulate 43*(med-min)/(max-min) */
+      int16_t hsv_h_x256;
+      if (u16_rgb_max == rgb888.p32.r)
+        hsv_h_x256 = static_cast<int16_t>((0x10000*0)/3)
+                   + (  static_cast<int16_t>(s_FAST_mult43_div[u16_rgb_delta])
+                      * (static_cast<int16_t>(rgb888.p32.g) - static_cast<int16_t>(rgb888.p32.b)));
+      else if (u16_rgb_max == rgb888.p32.g)
+        hsv_h_x256 = static_cast<int16_t>((0x10000*1)/3)
+                   + (  static_cast<int16_t>(s_FAST_mult43_div[u16_rgb_delta])
+                      * (static_cast<int16_t>(rgb888.p32.b) - static_cast<int16_t>(rgb888.p32.r)));
+      else
+        hsv_h_x256 = static_cast<int16_t>((0x10000*2)/3)
+                   + (  static_cast<int16_t>(s_FAST_mult43_div[u16_rgb_delta])
+                      * (static_cast<int16_t>(rgb888.p32.r) - static_cast<int16_t>(rgb888.p32.g)));
+      uint8_t hsv_h = static_cast<uint16_t>(hsv_h_x256) >> 8;
+
+      const bool hsv_h_det = (m_detectHueFrom <= m_detectHueTo)
+                           ? (m_detectHueFrom <= hsv_h) && (m_detectHueTo >= hsv_h)
+                           : (m_detectHueFrom <= hsv_h) || (m_detectHueTo >= hsv_h);
+
+      if (hsv_h_det && hsv_v_det && hsv_s_det)
+      {
+        _out_rgb888 = 0xffff00;
+        return true;
+      }
+#else
+      const uint32_t u32_hsv_val_sat_x256  = _pack2((static_cast<uint16_t>(u16_rgb_max)<<8), // get max in 8..15 bits
+                                                    (  static_cast<uint16_t>(s_FAST_mult255_div[u16_rgb_max])
+                                                     * static_cast<uint16_t>(u16_rgb_delta)));
+
+      int16_t s16_hsv_hue_x256;
+      if (u16_rgb_max == rgb888.p32.r)
+        s16_hsv_hue_x256 = static_cast<int16_t>((0x10000*0)/3)
+                         + (  static_cast<int16_t>(s_FAST_mult43_div[u16_rgb_delta])
+                            * (static_cast<int16_t>(rgb888.p32.g) - static_cast<int16_t>(rgb888.p32.b)));
+      else if (u16_rgb_max == rgb888.p32.g)
+        s16_hsv_hue_x256 = static_cast<int16_t>((0x10000*1)/3)
+                         + (  static_cast<int16_t>(s_FAST_mult43_div[u16_rgb_delta])
+                            * (static_cast<int16_t>(rgb888.p32.b) - static_cast<int16_t>(rgb888.p32.r)));
+      else
+        s16_hsv_hue_x256 = static_cast<int16_t>((0x10000*2)/3)
+                         + (  static_cast<int16_t>(s_FAST_mult43_div[u16_rgb_delta])
+                            * (static_cast<int16_t>(rgb888.p32.r) - static_cast<int16_t>(rgb888.p32.g)));
+      const uint32_t u32_hsv_hue_ooo_x256  = _pack2(static_cast<uint16_t>(s16_hsv_hue_x256), 0);
+
+      const uint32_t u32_hsv               = _packh4(u32_hsv_val_sat_x256, u32_hsv_hue_ooo_x256) >> 8;
+      const uint64_t u64_hsv_range         = m_FAST_detectRange;
+      const uint8_t  u8_hsv_det            = (  _cmpgtu4(u32_hsv, _hill(u64_hsv_range))
+                                              | _cmpeq4( u32_hsv, _hill(u64_hsv_range)))
+                                           & (  _cmpltu4(u32_hsv, _loll(u64_hsv_range))
+                                              | _cmpeq4( u32_hsv, _loll(u64_hsv_range)));
+
+      if (u8_hsv_det == m_FAST_detectExpected)
+      {
+        _out_rgb888 = 0xffff00;
+        return true;
+      }
+#endif
+
+      return false;
+    }
+#endif
 
 #ifdef DEBUG_FAST_TESTIFY_V3
     bool DEBUG_INLINE FAST_testifyRgbPixel(const uint32_t _rgb888,
