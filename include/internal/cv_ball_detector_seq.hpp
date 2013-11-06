@@ -17,6 +17,8 @@
 /* **** **** **** **** **** */ namespace cv /* **** **** **** **** **** */ {
 
 
+#define DEBUG_COMBINE_YUYV_RGB_HSV
+
 
 
 static uint16_t s_mult255_div[(1u<<8)];
@@ -123,8 +125,7 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
       return (u8_hsv_det == _hsv_expect);
     }
 
-    static void DEBUG_INLINE convert2xYuyvToRgb888(const uint32_t _yuyv,
-                                                   uint64_t* restrict _rgb2x888ptr)
+    static uint64_t DEBUG_INLINE convert2xYuyvToRgb888(const uint32_t _yuyv)
     {
       const int64_t  s64_yuyv1   = _mpyu4ll(_yuyv,
                                              (static_cast<uint32_t>(static_cast<uint8_t>(409/4))<<24)
@@ -147,7 +148,7 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
       const uint32_t u32_rgb_p2l =      _shr2(_add2(u32_rgb_l, u32_y2y2), 6);
       const uint32_t u32_rgb_p1 = _spacku4(u32_rgb_p1h, u32_rgb_p1l);
       const uint32_t u32_rgb_p2 = _spacku4(u32_rgb_p2h, u32_rgb_p2l);
-      *_rgb2x888ptr = _itoll(u32_rgb_p2, u32_rgb_p1);
+      return _itoll(u32_rgb_p2, u32_rgb_p1);
     }
 
     static uint32_t DEBUG_INLINE convertRgb888ToHsv(const uint32_t _rgb888)
@@ -193,6 +194,42 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
       return u32_hsv;
     }
 
+#ifdef DEBUG_COMBINE_YUYV_RGB_HSV
+    void DEBUG_INLINE convertImageYuyvToHsv(const TrikCvImageBuffer& _inImage)
+    {
+      const int8_t* restrict srcImageRow = _inImage.m_ptr;
+      uint64_t* restrict rgb2x888ptr = reinterpret_cast<uint64_t*>(s_rgb888);
+      uint64_t* restrict hsvx2ptr    = reinterpret_cast<uint64_t*>(s_hsv);
+      const uint16_t width4 = m_inImageDesc.m_width/4;
+
+      assert(m_inImageDesc.m_height % 4 == 0); // verified in setup
+#pragma MUST_ITERATE(4, ,4)
+      for (uint16_t srcRow=0; srcRow < m_inImageDesc.m_height; srcRow+=1)
+      {
+        assert(reinterpret_cast<intptr_t>(srcImageRow) % 8 == 0); // let's pray...
+        const uint64_t* restrict srcImagex2 = reinterpret_cast<const uint64_t*>(srcImageRow);
+
+        assert(m_inImageDesc.m_width % 32 == 0); // verified in setup
+#pragma MUST_ITERATE(32/4, ,32/4)
+        for (uint16_t remains = width4; remains > 0; --remains)
+        {
+          const uint64_t yuyv2x = *srcImagex2++;
+
+          const uint64_t rgb12 = convert2xYuyvToRgb888(_loll(yuyv2x));
+          *rgb2x888ptr++ = rgb12;
+          *hsvx2ptr++ = _itoll(convertRgb888ToHsv(_hill(rgb12)),
+                               convertRgb888ToHsv(_loll(rgb12)));
+
+          const uint64_t rgb34 = convert2xYuyvToRgb888(_hill(yuyv2x));
+          *rgb2x888ptr++ = rgb34;
+          *hsvx2ptr++ = _itoll(convertRgb888ToHsv(_hill(rgb34)),
+                               convertRgb888ToHsv(_loll(rgb34)));
+        }
+
+        srcImageRow += m_inImageDesc.m_lineLength;
+      }
+    }
+#else
     void DEBUG_INLINE convertImageYuyvToRgb888(const TrikCvImageBuffer& _inImage)
     {
       const int8_t* restrict srcImageRow = _inImage.m_ptr;
@@ -211,8 +248,8 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
         for (uint16_t remains = width4; remains > 0; --remains)
         {
           const uint64_t yuyv2x = *srcImagex2++;
-          convert2xYuyvToRgb888(_loll(yuyv2x), rgb2x888ptr++);
-          convert2xYuyvToRgb888(_hill(yuyv2x), rgb2x888ptr++);
+          *rgb2x888ptr++ = convert2xYuyvToRgb888(_loll(yuyv2x));
+          *rgb2x888ptr++ = convert2xYuyvToRgb888(_hill(yuyv2x));
         }
 
         srcImageRow += m_inImageDesc.m_lineLength;
@@ -234,6 +271,7 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
                              convertRgb888ToHsv(_loll(rgb888x2)));
       }
     }
+#endif
 
     void DEBUG_INLINE proceedImageHsv(TrikCvImageBuffer& _outImage)
     {
@@ -361,8 +399,12 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
 
       if (m_inImageDesc.m_width > 0 && m_inImageDesc.m_height > 0)
       {
+#ifdef DEBUG_COMBINE_YUYV_RGB_HSV
+        convertImageYuyvToHsv(_inImage);
+#else
         convertImageYuyvToRgb888(_inImage);
         convertImageRgb888ToHsv();
+#endif
         proceedImageHsv(_outImage);
       }
 
