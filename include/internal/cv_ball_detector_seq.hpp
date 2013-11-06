@@ -45,7 +45,7 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
     std::vector<uint16_t> m_srcToDstRowConv;
 
 
-    void static __attribute__((always_inline)) writeRgb565Pixel(uint16_t* restrict _rgb565ptr,
+    static void __attribute__((always_inline)) writeRgb565Pixel(uint16_t* restrict _rgb565ptr,
                                                                 const uint32_t _rgb888)
     {
       *_rgb565ptr = ((_rgb888>>19)&0x001f) | ((_rgb888>>5)&0x07e0) | ((_rgb888<<8)&0xf800);
@@ -113,7 +113,7 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
       }
     }
 
-    bool static __attribute__((always_inline)) detectHsvPixel(const uint32_t _hsv,
+    static bool __attribute__((always_inline)) detectHsvPixel(const uint32_t _hsv,
                                                               const uint64_t _hsv_range,
                                                               const uint8_t  _hsv_expect)
     {
