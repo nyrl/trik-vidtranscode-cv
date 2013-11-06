@@ -255,20 +255,16 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
         return false;
       _outImage.m_size = m_outImageDesc.m_height * m_outImageDesc.m_lineLength;
 
+      m_targetX = 0;
+      m_targetY = 0;
+      m_targetPoints = 0;
+
       uint8_t detectHueFrom = range<int16_t>(0, (_inArgs.detectHueFrom * 255) / 359, 255); // scaling 0..359 to 0..255
       uint8_t detectHueTo   = range<int16_t>(0, (_inArgs.detectHueTo   * 255) / 359, 255); // scaling 0..359 to 0..255
       uint8_t detectSatFrom = range<int16_t>(0, (_inArgs.detectSatFrom * 255) / 100, 255); // scaling 0..100 to 0..255
       uint8_t detectSatTo   = range<int16_t>(0, (_inArgs.detectSatTo   * 255) / 100, 255); // scaling 0..100 to 0..255
       uint8_t detectValFrom = range<int16_t>(0, (_inArgs.detectValFrom * 255) / 100, 255); // scaling 0..100 to 0..255
       uint8_t detectValTo   = range<int16_t>(0, (_inArgs.detectValTo   * 255) / 100, 255); // scaling 0..100 to 0..255
-
-#ifdef DEBUG_REPEAT
-      for (unsigned repeat = 0; repeat < DEBUG_REPEAT; ++repeat) {
-#endif
-
-      m_targetX = 0;
-      m_targetY = 0;
-      m_targetPoints = 0;
 
       if (detectHueFrom <= detectHueTo)
       {
@@ -284,32 +280,39 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
         m_detectExpected = 0x8|0x6; // top byte is always compare equal
       }
 
-      assert(m_inImageDesc.m_height % 4 == 0); // verified in setup
-#pragma MUST_ITERATE(,,4)
-      for (uint16_t srcRow=0; srcRow < m_inImageDesc.m_height; ++srcRow)
+
+#ifdef DEBUG_REPEAT
+      for (unsigned repeat = 0; repeat < DEBUG_REPEAT; ++repeat) {
+#endif
+
+      if (m_inImageDesc.m_height > 0 && m_inImageDesc.m_width > 0)
       {
-        assert(srcRow < m_srcToDstRowConv.size());
-        const uint16_t dstRow = m_srcToDstRowConv[srcRow];
-
-        const uint32_t  srcRowOfs = srcRow*m_inImageDesc.m_lineLength;
-        const uint32_t* srcImage  = reinterpret_cast<uint32_t*>(_inImage.m_ptr + srcRowOfs);
-
-        const uint32_t dstRowOfs   = dstRow*m_outImageDesc.m_lineLength;
-        uint16_t*      dstImageRow = reinterpret_cast<uint16_t*>(_outImage.m_ptr + dstRowOfs);
-
-        assert(m_inImageDesc.m_width % 32 == 0); // verified in setup
-#pragma MUST_ITERATE(,,32/2)
-        for (uint16_t srcCol=0; srcCol < m_inImageDesc.m_width; srcCol+=2)
+        assert(m_inImageDesc.m_height % 4 == 0); // verified in setup
+#pragma MUST_ITERATE(4,,4)
+        for (uint16_t srcRow=0; srcRow < m_inImageDesc.m_height; ++srcRow)
         {
-          assert(_srcCol+1 < m_srcToDstColConv.size());
-          const uint16_t dstCol1 = m_srcToDstColConv[srcCol+0];
-          const uint16_t dstCol2 = m_srcToDstColConv[srcCol+1];
-          uint16_t* dstImagePix1 = &dstImageRow[dstCol1];
-          uint16_t* dstImagePix2 = &dstImageRow[dstCol2];
-          proceedTwoYuyvPixels(srcRow, srcCol+0, srcCol+1, dstImagePix1, dstImagePix2, *srcImage++);
+          assert(srcRow < m_srcToDstRowConv.size());
+          const uint16_t dstRow = m_srcToDstRowConv[srcRow];
+
+          const uint32_t  srcRowOfs = srcRow*m_inImageDesc.m_lineLength;
+          const uint32_t* srcImage  = reinterpret_cast<uint32_t*>(_inImage.m_ptr + srcRowOfs);
+
+          const uint32_t dstRowOfs   = dstRow*m_outImageDesc.m_lineLength;
+          uint16_t*      dstImageRow = reinterpret_cast<uint16_t*>(_outImage.m_ptr + dstRowOfs);
+
+          assert(m_inImageDesc.m_width % 32 == 0); // verified in setup
+#pragma MUST_ITERATE(32/2,,32/2)
+          for (uint16_t srcCol=0; srcCol < m_inImageDesc.m_width; srcCol+=2)
+          {
+            assert(_srcCol+1 < m_srcToDstColConv.size());
+            const uint16_t dstCol1 = m_srcToDstColConv[srcCol+0];
+            const uint16_t dstCol2 = m_srcToDstColConv[srcCol+1];
+            uint16_t* dstImagePix1 = &dstImageRow[dstCol1];
+            uint16_t* dstImagePix2 = &dstImageRow[dstCol2];
+            proceedTwoYuyvPixels(srcRow, srcCol+0, srcCol+1, dstImagePix1, dstImagePix2, *srcImage++);
+          }
         }
       }
-
 
 #ifdef DEBUG_REPEAT
       } // repeat
