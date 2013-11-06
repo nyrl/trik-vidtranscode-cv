@@ -739,7 +739,7 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
                                            |(static_cast<uint32_t>(static_cast<uint8_t>(298/4))<<16)
                                            |(static_cast<uint32_t>(static_cast<uint8_t>(516/4))<< 8)
                                            |(static_cast<uint32_t>(static_cast<uint8_t>(298/4))    ));
-      const uint32_t u32_yuyv2  = _dotpus4(_yuyv&0xff00ff00,
+      const uint32_t u32_yuyv2  = _dotpus4(_yuyv,
                                             (static_cast<uint32_t>(static_cast<uint8_t>(-208/4))<<24)
                                            |(static_cast<uint32_t>(static_cast<uint8_t>(-100/4))<< 8));
       const uint32_t u32_rgb_h1 = _packh2( u32_yuyv2/*0*/, _hill(s64_yuyv1));
