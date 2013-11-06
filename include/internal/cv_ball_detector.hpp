@@ -256,7 +256,7 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
     }
 
 
-    static void __attribute__((always_inline)) writeRgbPixel(XDAS_UInt16* _rgb,
+    void static __attribute__((always_inline)) writeRgbPixel(XDAS_UInt16* _rgb,
                                                              const XDAS_UInt8 _r,
                                                              const XDAS_UInt8 _g,
                                                              const XDAS_UInt8 _b)
@@ -277,7 +277,7 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
       writeRgbPixel(&_rgbRow[dstCol], _r, _g, _b);
     }
 
-    static void __attribute__((always_inline)) FAST_writeRgb565Pixel(uint16_t* _rgb565ptr,
+    void static __attribute__((always_inline)) FAST_writeRgb565Pixel(uint16_t* _rgb565ptr,
                                                                      const uint32_t _rgb888)
     {
       *_rgb565ptr = ((_rgb888>>19)&0x001f) | ((_rgb888>>5)&0x07e0) | ((_rgb888<<8)&0xf800);
