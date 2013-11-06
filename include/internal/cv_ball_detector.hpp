@@ -200,14 +200,15 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
     {
       const uint32_t u32_rgb_or16    = _unpkhu4(_rgb888);
       const uint32_t u32_rgb_gb16    = _unpklu4(_rgb888);
-      const uint32_t u32_rgb_min2    = _minu4(_rgb888, _rgb888>>8);
       const uint32_t u32_rgb_max2    = _maxu4(_rgb888, _rgb888>>8);
-      const uint16_t u16_rgb_min     =      _minu4(u32_rgb_min2, u32_rgb_min2>>8);         // top 3 bytes are zeroes
       const uint16_t u16_rgb_max     = _clr(_maxu4(u32_rgb_max2, u32_rgb_max2>>8), 8, 31); // top 3 bytes were non-zeroes!
-      const uint16_t u16_rgb_delta   = u16_rgb_max-u16_rgb_min;
       const uint32_t u32_rgb_max_max = _pack2(u16_rgb_max, u16_rgb_max);
 
       const uint32_t u32_hsv_ooo_val_x256   = static_cast<uint16_t>(u16_rgb_max)<<8; // get max in 8..15 bits
+
+      const uint32_t u32_rgb_min2    = _minu4(_rgb888, _rgb888>>8);
+      const uint16_t u16_rgb_min     = _minu4(u32_rgb_min2, u32_rgb_min2>>8); // top 3 bytes are zeroes
+      const uint16_t u16_rgb_delta   = u16_rgb_max-u16_rgb_min;
 
       /* optimized by table based multiplication with power-2 divisor, simulate 255*(max-min)/max */
       const uint16_t u16_hsv_sat_x256       = static_cast<uint16_t>(s_FAST_mult255_div[u16_rgb_max])
