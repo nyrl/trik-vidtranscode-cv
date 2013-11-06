@@ -23,7 +23,7 @@ var targ = xdc.useModule("ti.targets.elf.C674");
 targ.rootDir = C674_rootdir;
 targ.ccOpts.suffix  = "--gcc -pden --gen_func_subsections --interrupt_threshold=50 ";
 targ.ccOpts.suffix += "--no_bad_aliases --no_reload_errors ";
-targ.profiles["release"].compileOpts.copts  = "--opt_level=3 --opt_for_speed=5 --call_assumptions=3 --auto_inline ";
+targ.profiles["release"].compileOpts.copts  = "--opt_level=3 --opt_for_speed=5 --call_assumptions=3 --auto_inline --speculate_loads=auto ";
 targ.profiles["release"].compileOpts.copts += "--debug_software_pipeline --optimizer_interlist --c_src_interlist ";
 targ.profiles["release"].compileOpts.copts += "--gen_opt_info=2 --advice:performance=all ";
 targ.profiles["release"].compileOpts.defs = "-DNDEBUG=1 ";
