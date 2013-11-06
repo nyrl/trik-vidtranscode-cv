@@ -45,6 +45,7 @@ class BallDetector : public CVAlgorithm,
 //#define DEBUG_VERIFY_TESTIFY
 //#define DEBUG_FAST_TESTIFY_V1
 #define DEBUG_FAST_TESTIFY_V2
+//#define DEBUG_REPEAT 20
 
 static uint16_t s_FAST_mult255_div[(1u<<8)];
 static uint16_t s_FAST_mult43_div[(1u<<8)];
@@ -695,6 +696,11 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
       m_detectSatTo   = range<XDAS_Int16>(0, (_inArgs.detectSatTo   * 255) / 100, 255); // scaling 0..100 to 0..255
       m_detectValFrom = range<XDAS_Int16>(0, (_inArgs.detectValFrom * 255) / 100, 255); // scaling 0..100 to 0..255
       m_detectValTo   = range<XDAS_Int16>(0, (_inArgs.detectValTo   * 255) / 100, 255); // scaling 0..100 to 0..255
+
+#ifdef DEBUG_REPEAT
+      for (unsigned repeat = 0; repeat < DEBUG_REPEAT; ++repeat) {
+#endif
+
       m_targetX = 0;
       m_targetY = 0;
       m_targetPoints = 0;
@@ -728,6 +734,10 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
         for (TrikCvImageDimension srcCol=0; srcCol < m_inImageDesc.m_width; srcCol+=2)
           FAST_proceedTwoYuyvPixels(srcRow, srcCol, dstImageRow, *srcImage++);
       }
+
+#ifdef DEBUG_REPEAT
+      } // repeat
+#endif
 
       const TrikCvImageDimension inImagePixels = m_inImageDesc.m_width * m_inImageDesc.m_height;
       if (inImagePixels > 0)
