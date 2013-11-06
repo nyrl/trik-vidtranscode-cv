@@ -18,8 +18,6 @@
 /* **** **** **** **** **** */ namespace cv /* **** **** **** **** **** */ {
 
 
-static uint16_t s_mult255_div[(1u<<8)];
-static uint16_t s_mult43_div[(1u<<8)];
 
 
 template <>
@@ -38,6 +36,8 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
 
     std::vector<uint16_t> m_srcToDstColConv;
     std::vector<uint16_t> m_srcToDstRowConv;
+
+    uint16_t m_mult_div_43_255[(1u<<8)*2];
 
     void static __attribute__((always_inline)) writeRgb565Pixel(uint16_t* _rgb565ptr,
                                                                 const uint32_t _rgb888)
@@ -123,12 +123,12 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
       const uint16_t u16_rgb_delta   = u16_rgb_max-u16_rgb_min;
 
       /* optimized by table based multiplication with power-2 divisor, simulate 255*(max-min)/max */
-      const uint16_t u16_hsv_sat_x256       = static_cast<uint16_t>(s_mult255_div[u16_rgb_max])
+      const uint16_t u16_hsv_sat_x256       = static_cast<uint16_t>(m_mult_div_43_255[u16_rgb_max+(1u<<8)])
                                             * static_cast<uint16_t>(u16_rgb_delta);
 
       /* optimized by table based multiplication with power-2 divisor, simulate 43*(med-min)/(max-min) */
-      const uint32_t u32_hsv_hue_mult43_div = _pack2(s_mult43_div[u16_rgb_delta],
-                                                     s_mult43_div[u16_rgb_delta]);
+      const uint32_t u32_hsv_hue_mult43_div = _pack2(m_mult_div_43_255[u16_rgb_delta],
+                                                     m_mult_div_43_255[u16_rgb_delta]);
       int16_t s16_hsv_hue_x256;
       const uint8_t u8_rgb_cmp = _cmpeq2(u32_rgb_max_max, u32_rgb_gb16);
       if (u8_rgb_cmp == 0)
@@ -235,13 +235,13 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
       for (uint16_t srcRow=0; srcRow < m_srcToDstRowConv.size(); ++srcRow)
         m_srcToDstRowConv[srcRow] = (srcRow*m_outImageDesc.m_height) / m_inImageDesc.m_height; // m_height > 0 if came here
 
-      s_mult255_div[0] = 0;
+      m_mult_div_43_255[0] = 0;
       for (uint16_t idx = 1; idx < (1u<<8); ++idx)
-        s_mult255_div[idx] = (255u * (1u<<8)) / idx;
+        m_mult_div_43_255[idx] = (43u * (1u<<8)) / idx;
 
-      s_mult43_div[0] = 0;
+      m_mult_div_43_255[(1u<<8)] = 0;
       for (uint16_t idx = 1; idx < (1u<<8); ++idx)
-        s_mult43_div[idx] = (43u * (1u<<8)) / idx;
+        m_mult_div_43_255[idx+(1u<<8)] = (255u * (1u<<8)) / idx;
 
       return true;
     }
