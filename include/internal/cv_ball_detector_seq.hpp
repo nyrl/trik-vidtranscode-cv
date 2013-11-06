@@ -353,7 +353,7 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
       for (uint16_t idx = 1; idx < (1u<<8); ++idx)
       {
         s_mult255_div[idx] = (255u * (1u<<8)) / idx;
-        s_mult43_div[idx]  = (43u  * (1u<<8)) / idx;
+        s_mult43_div[ idx] = (43u  * (1u<<8)) / idx;
       }
 
       return true;
