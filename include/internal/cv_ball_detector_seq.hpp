@@ -201,10 +201,11 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
       uint64_t* restrict rgb2x888ptr = reinterpret_cast<uint64_t*>(s_rgb888);
       uint64_t* restrict hsvx2ptr    = reinterpret_cast<uint64_t*>(s_hsv);
       const uint16_t width4 = m_inImageDesc.m_width/4;
+      const uint16_t height = m_inImageDesc.m_height;
 
       assert(m_inImageDesc.m_height % 4 == 0); // verified in setup
 #pragma MUST_ITERATE(4, ,4)
-      for (uint16_t srcRow=0; srcRow < m_inImageDesc.m_height; srcRow+=1)
+      for (uint16_t heightRemains=height; heightRemains>0; --heightRemains)
       {
         assert(reinterpret_cast<intptr_t>(srcImageRow) % 8 == 0); // let's pray...
         const uint64_t* restrict srcImagex2 = reinterpret_cast<const uint64_t*>(srcImageRow);
