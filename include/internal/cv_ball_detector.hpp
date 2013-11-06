@@ -243,6 +243,7 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
                                            & (  _cmpltu4(u32_hsv, _loll(u64_hsv_range))
                                               | _cmpeq4( u32_hsv, _loll(u64_hsv_range)));
 
+      // SCORE cf5dee: 2.541, 2.485, 2.526, 2.471, 2.514
       if (u8_hsv_det != m_FAST_detectExpected)
         return false;
 
@@ -299,7 +300,7 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
 
 
 #if 0
-      // 2.160, 2.159, 2.153
+      // SCORE cf5dee: (faulty!) 2.238, 2.190, 2.229, 2.186, 2.224
       const uint16_t hsv_v = hsv_max;
       const bool hsv_v_det = (m_detectValFrom <= hsv_v) && (m_detectValTo >= hsv_v);
 
@@ -322,7 +323,7 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
         return true;
       }
 #else
-      // 2.253, 2.243, 2.232
+      // SCORE cf5dee: 2.309, 2.236, 2.255, 2.280, 2.302
       const uint32_t u32_hsv_ooo_val_x256  = hsv_max<<8; // get max in 8..15 bits
       const int32_t  s32_hsv_sat_x256      = s_FAST_mult255_div[hsv_max]
                                            * hsv_delta;
@@ -420,7 +421,7 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
       }
 
 #if 0
-      // 2.373, 2.351, 2.361
+      // SCORE cf5dee: 2.324, 2.262, 2.297, 2.340, 2.282
       const uint16_t hsv_v    = hsv.p32.max;
       const bool hsv_v_det    = (m_detectValFrom <= hsv_v) && (m_detectValTo >= hsv_v);
 
@@ -443,8 +444,7 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
         return true;
       }
 #else
-      // 2.387, 2.386, 2.381
-      // (unrelated) 2.347, 2.390, 2.452, 2.407, 2.358
+      // SCORE cf5dee: 2.440, 2.392, 2.450, 2.408, 2.357
       const uint32_t u32_hsv_ooo_val_x256  = hsv.p32.max<<8; // get max in 8..15 bits
       const uint32_t u32_hsv_sat_x256      = s_FAST_mult255_div[hsv.p32.max]
                                            * (hsv.p32.max-hsv.p32.min);
@@ -556,7 +556,7 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
                                               | _cmpeq4( u32_hsv, _hill(u64_hsv_range)))
                                            & (  _cmpltu4(u32_hsv, _loll(u64_hsv_range))
                                               | _cmpeq4( u32_hsv, _loll(u64_hsv_range)));
-      // 1.941, 1.922, 1.931
+      // SCORE cf5dee: 2.006, 1.993, 1.953, 1.969, 1.992
 
       if (u8_hsv_det != m_FAST_detectExpected)
         return false;
