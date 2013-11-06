@@ -236,8 +236,8 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
 
     void DEBUG_INLINE proceedImageHsv(TrikCvImageBuffer& _outImage)
     {
-      const uint32_t* restrict rgb888ptr = s_rgb888;
-      const uint32_t* restrict hsvptr = s_hsv;
+      const uint64_t* restrict rgb888x2ptr = reinterpret_cast<uint64_t*>(s_rgb888);
+      const uint64_t* restrict hsvx2ptr    = reinterpret_cast<uint64_t*>(s_hsv);
       const uint64_t u64_hsv_range = m_detectRange;
       const uint8_t  u8_hsv_expect = m_detectExpected;
       int32_t  targetX = 0;
@@ -254,21 +254,34 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
         uint16_t* restrict dstImageRow = reinterpret_cast<uint16_t*>(_outImage.m_ptr + dstRowOfs);
 
         assert(m_inImageDesc.m_width % 32 == 0); // verified in setup
-#pragma MUST_ITERATE(32, ,32)
-        for (uint16_t srcCol=0; srcCol < m_inImageDesc.m_width; ++srcCol)
+#pragma MUST_ITERATE(32/2, ,32/2)
+        for (uint16_t srcCol=0; srcCol < m_inImageDesc.m_width; srcCol+=2)
         {
-          uint32_t rgb888 = *rgb888ptr++;
-          if (detectHsvPixel(*hsvptr++, u64_hsv_range, u8_hsv_expect))
+          assert(_srcCol+1 < m_srcToDstColConv.size());
+          const uint16_t dstCol1 = m_srcToDstColConv[srcCol+0];
+          const uint16_t dstCol2 = m_srcToDstColConv[srcCol+1];
+          const uint64_t rgb888x2 = *rgb888x2ptr++;
+          const uint64_t hsvx2    = *hsvx2ptr++;
+
+          if (detectHsvPixel(_loll(hsvx2), u64_hsv_range, u8_hsv_expect))
           {
-            targetX += srcCol;
+            targetX += srcCol+0;
             targetY += srcRow;
             targetPoints += 1;
-            rgb888 = 0xffff00;
+            writeRgb565Pixel(dstImageRow+dstCol1, 0xffff00);
           }
+          else
+            writeRgb565Pixel(dstImageRow+dstCol1, _loll(rgb888x2));
 
-          assert(_srcCol < m_srcToDstColConv.size());
-          const uint16_t dstCol = m_srcToDstColConv[srcCol];
-          writeRgb565Pixel(dstImageRow+dstCol, rgb888);
+          if (detectHsvPixel(_hill(hsvx2), u64_hsv_range, u8_hsv_expect))
+          {
+            targetX += srcCol+1;
+            targetY += srcRow;
+            targetPoints += 1;
+            writeRgb565Pixel(dstImageRow+dstCol2, 0xffff00);
+          }
+          else
+            writeRgb565Pixel(dstImageRow+dstCol2, _hill(rgb888x2));
         }
       }
       m_targetX = targetX;
