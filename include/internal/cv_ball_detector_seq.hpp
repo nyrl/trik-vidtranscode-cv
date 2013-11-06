@@ -135,7 +135,7 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
     }
 
     static void DEBUG_INLINE convert2xYuyvToRgb888(const uint32_t _yuyv,
-                                                   uint64_t* _rgb2x888ptr)
+                                                   uint64_t* restrict _rgb2x888ptr)
     {
       const int64_t  s64_yuyv1   = _mpyu4ll(_yuyv,
                                              (static_cast<uint32_t>(static_cast<uint8_t>(409/4))<<24)
@@ -208,14 +208,14 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
     void DEBUG_INLINE convertImageYuyvToRgb888(const TrikCvImageBuffer& _inImage)
     {
       const int8_t* srcImageRow = _inImage.m_ptr;
-      uint64_t* rgb2x888ptr = reinterpret_cast<uint64_t*>(s_rgb888);
+      uint64_t* restrict rgb2x888ptr = reinterpret_cast<uint64_t*>(s_rgb888);
 
       assert(m_inImageDesc.m_height % 4 == 0); // verified in setup
 #pragma MUST_ITERATE(4, ,4)
       for (uint16_t srcRow=0; srcRow < m_inImageDesc.m_height; srcRow+=1)
       {
         assert(reinterpret_cast<intptr_t>(srcImageRow) % 8 == 0); // let's pray...
-        const uint64_t* srcImagex2 = reinterpret_cast<const uint64_t*>(srcImageRow);
+        const uint64_t* restrict srcImagex2 = reinterpret_cast<const uint64_t*>(srcImageRow);
 
         assert(m_inImageDesc.m_width % 32 == 0); // verified in setup
 #pragma MUST_ITERATE(32/4, ,32/4)
