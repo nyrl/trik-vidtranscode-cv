@@ -45,6 +45,7 @@ class BallDetector : public CVAlgorithm,
 //#define DEBUG_VERIFY_TESTIFY
 //#define DEBUG_FAST_TESTIFY_V1
 #define DEBUG_FAST_TESTIFY_V2
+//#define DEBUG_FAST_TESTIFY_V3
 //#define DEBUG_REPEAT 20
 
 static uint16_t s_FAST_mult255_div[(1u<<8)];
@@ -193,6 +194,103 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
     }
 
 
+#ifdef DEBUG_FAST_TESTIFY_V3
+    bool DEBUG_INLINE FAST_testifyRgbPixel(const uint32_t _rgb888,
+                                           uint32_t& _out_rgb888) const
+    {
+      union
+      {
+        struct {
+          uint8_t b;
+          uint8_t g;
+          uint8_t r;
+          uint8_t unused;
+        } p32;
+        uint32_t u32;
+      } hsv;
+      hsv.u32 = _rgb888;
+
+      int16_t hsv_max;
+      int16_t hsv_delta;
+      int16_t hsv_delta_hue;
+      int16_t hsv_base_hue;
+
+#define DEF_MIN_MED_MAX(_max, _min, _hue1, _hue2, _hue_base) \
+      do { \
+        hsv_max       = static_cast<int16_t>(_max); \
+        hsv_delta     = static_cast<int16_t>(_max) -static_cast<int16_t>(_min); \
+        hsv_delta_hue = static_cast<int16_t>(_hue1)-static_cast<int16_t>(_hue2); \
+        hsv_base_hue  = static_cast<int16_t>(_hue_base); \
+      } while (0)
+
+      if (hsv.p32.r > hsv.p32.b)
+      {
+        if (hsv.p32.b > hsv.p32.g) // r>b, b>g --> r>b>g
+          DEF_MIN_MED_MAX(hsv.p32.r, hsv.p32.g, hsv.p32.g, hsv.p32.b, (0x10000*0)/3);
+        else if (hsv.p32.r > hsv.p32.g) // r>b, b<=g, r>g --> r>g>=b
+          DEF_MIN_MED_MAX(hsv.p32.r, hsv.p32.b, hsv.p32.g, hsv.p32.b, (0x10000*0)/3);
+        else // r>b, b<=g, r<=g --> g>=r>b
+          DEF_MIN_MED_MAX(hsv.p32.g, hsv.p32.b, hsv.p32.b, hsv.p32.r, (0x10000*1)/3);
+      }
+      else if (hsv.p32.g > hsv.p32.b) // r<=b, g>b --> g>b>=r
+        DEF_MIN_MED_MAX(hsv.p32.g, hsv.p32.r, hsv.p32.b, hsv.p32.r, (0x10000*1)/3);
+      else if (hsv.p32.r > hsv.p32.g) // r<=b, g<=b, r>g --> b>=r>g
+        DEF_MIN_MED_MAX(hsv.p32.b, hsv.p32.g, hsv.p32.r, hsv.p32.g, (0x10000*2)/3);
+      else // r<=b, g<=b, r<=g --> b>=g>=r
+        DEF_MIN_MED_MAX(hsv.p32.b, hsv.p32.r, hsv.p32.r, hsv.p32.g, (0x10000*2)/3);
+#undef DEF_MIN_MED_MAX
+
+
+#if 0
+      // 2.160, 2.159, 2.153
+      const uint16_t hsv_v = hsv_max;
+      const bool hsv_v_det = (m_detectValFrom <= hsv_v) && (m_detectValTo >= hsv_v);
+
+      /* optimized by table based multiplication with power-2 divisor, simulate 255*(max-min)/max */
+      const uint16_t hsv_s = (  s_FAST_mult255_div[hsv_max]
+                              * hsv_delta) >> 8;
+      const bool hsv_s_det = (m_detectSatFrom <= hsv_s) && (m_detectSatTo >= hsv_s);
+
+      /* optimized by table based multiplication with power-2 divisor, simulate 43*(med-min)/(max-min) */
+      const uint16_t hsv_h = (  (  s_FAST_mult43_div[hsv_delta]
+                                 * hsv_delta_hue)
+                              + hsv_base_hue) >> 8;
+      const bool hsv_h_det = (m_detectHueFrom <= m_detectHueTo)
+                           ? (m_detectHueFrom <= hsv_h) && (m_detectHueTo >= hsv_h)
+                           : (m_detectHueFrom <= hsv_h) || (m_detectHueTo >= hsv_h);
+
+      if (hsv_h_det && hsv_v_det && hsv_s_det)
+      {
+        _out_rgb888 = 0xffff00;
+        return true;
+      }
+#else
+      // 2.253, 2.243, 2.232
+      const uint32_t u32_hsv_ooo_val_x256  = hsv_max<<8; // get max in 8..15 bits
+      const int32_t  s32_hsv_sat_x256      = s_FAST_mult255_div[hsv_max]
+                                           * hsv_delta;
+      const int32_t  s32_hsv_hue_x256      = s_FAST_mult43_div[hsv_delta]
+                                           * hsv_delta_hue
+                                           + hsv_base_hue;
+
+      const uint32_t u32_hsv_sat_hue_x256  = _pack2(s32_hsv_sat_x256, s32_hsv_hue_x256);
+      const uint32_t u32_hsv               = _packh4(u32_hsv_ooo_val_x256, u32_hsv_sat_hue_x256);
+      const uint64_t u64_hsv_range         = m_FAST_detectRange;
+      const uint8_t  u8_hsv_det            = (  _cmpgtu4(u32_hsv, _hill(u64_hsv_range))
+                                              | _cmpeq4( u32_hsv, _hill(u64_hsv_range)))
+                                           & (  _cmpltu4(u32_hsv, _loll(u64_hsv_range))
+                                              | _cmpeq4( u32_hsv, _loll(u64_hsv_range)));
+
+      if (u8_hsv_det == m_FAST_detectExpected)
+      {
+        _out_rgb888 = 0xffff00;
+        return true;
+      }
+#endif
+
+      return false;
+    }
+#endif
 
 #ifdef DEBUG_FAST_TESTIFY_V2
     bool DEBUG_INLINE FAST_testifyRgbPixel(const uint32_t _rgb888,
@@ -264,28 +362,55 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
         hsv_base = (0x10000*0)/3;
       }
 
-
-      const uint16_t hsv_v = hsv.p32.max;
-      const bool hsv_v_det = (m_detectValFrom <= hsv_v) && (m_detectValTo >= hsv_v);
+#if 0
+      // 2.373, 2.351, 2.361
+      const uint16_t hsv_v    = hsv.p32.max;
+      const bool hsv_v_det    = (m_detectValFrom <= hsv_v) && (m_detectValTo >= hsv_v);
 
       /* optimized by table based multiplication with power-2 divisor, simulate 255*(max-min)/max */
-      const uint16_t hsv_s = (  s_FAST_mult255_div[hsv.p32.max]
-                              * (hsv.p32.max-hsv.p32.min)) >> 8;
-      const bool hsv_s_det = (m_detectSatFrom <= hsv_s) && (m_detectSatTo >= hsv_s);
+      const uint16_t hsv_s    = (  s_FAST_mult255_div[hsv.p32.max]
+                                 * (hsv.p32.max-hsv.p32.min)) >> 8;
+      const bool hsv_s_det    = (m_detectSatFrom <= hsv_s) && (m_detectSatTo >= hsv_s);
 
       /* optimized by table based multiplication with power-2 divisor, simulate 43*(med-min)/(max-min) */
       const uint16_t hsv_incr = (  s_FAST_mult43_div[hsv.p32.max-hsv.p32.min]
                                  * (hsv.p32.med-hsv.p32.min));
-      const uint16_t hsv_h = (hsv_is_incr ? hsv_base + hsv_incr : hsv_base - hsv_incr) >> 8;
-      const bool hsv_h_det = (m_detectHueFrom <= m_detectHueTo)
-                           ? (m_detectHueFrom <= hsv_h) && (m_detectHueTo >= hsv_h)
-                           : (m_detectHueFrom <= hsv_h) || (m_detectHueTo >= hsv_h);
+      const uint16_t hsv_h    = (hsv_is_incr ? hsv_base + hsv_incr : hsv_base - hsv_incr) >> 8;
+      const bool hsv_h_det    = (m_detectHueFrom <= m_detectHueTo)
+                              ? (m_detectHueFrom <= hsv_h) && (m_detectHueTo >= hsv_h)
+                              : (m_detectHueFrom <= hsv_h) || (m_detectHueTo >= hsv_h);
 
       if (hsv_h_det && hsv_v_det && hsv_s_det)
       {
         _out_rgb888 = 0xffff00;
         return true;
       }
+#else
+      // 2.387, 2.386, 2.381
+      const uint32_t u32_hsv_ooo_val_x256  = hsv.p32.max<<8; // get max in 8..15 bits
+      const uint32_t u32_hsv_sat_x256      = s_FAST_mult255_div[hsv.p32.max]
+                                           * (hsv.p32.max-hsv.p32.min);
+      const uint32_t u32_hsv_hue_incr_x256 = s_FAST_mult43_div[hsv.p32.max-hsv.p32.min]
+                                           * (hsv.p32.med-hsv.p32.min);
+      const uint32_t u32_hsv_hue_x256      = hsv_is_incr
+                                           ? hsv_base + u32_hsv_hue_incr_x256
+                                           : hsv_base - u32_hsv_hue_incr_x256;
+
+      const uint32_t u32_hsv_sat_hue_x256  = _pack2(u32_hsv_sat_x256, u32_hsv_hue_x256);
+      const uint32_t u32_hsv               = _packh4(u32_hsv_ooo_val_x256, u32_hsv_sat_hue_x256);
+      const uint64_t u64_hsv_range         = m_FAST_detectRange;
+      const uint8_t  u8_hsv_det            = (  _cmpgtu4(u32_hsv, _hill(u64_hsv_range))
+                                              | _cmpeq4( u32_hsv, _hill(u64_hsv_range)))
+                                           & (  _cmpltu4(u32_hsv, _loll(u64_hsv_range))
+                                              | _cmpeq4( u32_hsv, _loll(u64_hsv_range)));
+
+      if (u8_hsv_det == m_FAST_detectExpected)
+      {
+        _out_rgb888 = 0xffff00;
+        return true;
+      }
+#endif
+
       return false;
     }
 #endif
@@ -373,6 +498,7 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
                                               | _cmpeq4( u32_hsv, _hill(u64_hsv_range)))
                                            & (  _cmpltu4(u32_hsv, _loll(u64_hsv_range))
                                               | _cmpeq4( u32_hsv, _loll(u64_hsv_range)));
+      // 1.941, 1.922, 1.931
 
       if (u8_hsv_det != m_FAST_detectExpected)
         return false;
