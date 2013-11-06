@@ -387,6 +387,7 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
       }
 #else
       // 2.387, 2.386, 2.381
+      // (unrelated) 2.347, 2.390, 2.452, 2.407, 2.358
       const uint32_t u32_hsv_ooo_val_x256  = hsv.p32.max<<8; // get max in 8..15 bits
       const uint32_t u32_hsv_sat_x256      = s_FAST_mult255_div[hsv.p32.max]
                                            * (hsv.p32.max-hsv.p32.min);
