@@ -277,15 +277,17 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
     {
       const uint64_t* restrict rgb888x2ptr = reinterpret_cast<uint64_t*>(s_rgb888);
       const uint64_t* restrict hsvx2ptr    = reinterpret_cast<uint64_t*>(s_hsv);
+      const uint16_t width  = m_inImageDesc.m_width;
+      const uint16_t height = m_inImageDesc.m_height;
       const uint64_t u64_hsv_range = m_detectRange;
       const uint8_t  u8_hsv_expect = m_detectExpected;
       int32_t  targetX = 0;
       int32_t  targetY = 0;
       uint32_t targetPoints = 0;
 
-      assert(m_inImageDesc.m_height % 4 == 0); // verified in setup
+      assert(height % 4 == 0); // verified in setup
 #pragma MUST_ITERATE(4, ,4)
-      for (uint16_t srcRow=0; srcRow < m_inImageDesc.m_height; ++srcRow)
+      for (uint16_t srcRow=0; srcRow < height; ++srcRow)
       {
         assert(srcRow < m_srcToDstRowConv.size());
         const uint16_t dstRow = m_srcToDstRowConv[srcRow];
@@ -294,7 +296,7 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
 
         assert(m_inImageDesc.m_width % 32 == 0); // verified in setup
 #pragma MUST_ITERATE(32/2, ,32/2)
-        for (uint16_t srcCol=0; srcCol < m_inImageDesc.m_width; srcCol+=2)
+        for (uint16_t srcCol=0; srcCol < width; srcCol+=2)
         {
           assert(_srcCol+1 < m_srcToDstColConv.size());
           const uint16_t dstCol1 = m_srcToDstColConv[srcCol+0];
@@ -323,6 +325,7 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
             writeRgb565Pixel(dstImageRow+dstCol2, _hill(rgb888x2));
         }
       }
+
       m_targetX = targetX;
       m_targetY = targetY;
       m_targetPoints = targetPoints;
