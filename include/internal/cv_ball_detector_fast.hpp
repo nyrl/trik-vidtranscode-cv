@@ -233,13 +233,13 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
       for (uint16_t srcRow=0; srcRow < m_srcToDstRowConv.size(); ++srcRow)
         m_srcToDstRowConv[srcRow] = (srcRow*m_outImageDesc.m_height) / m_inImageDesc.m_height; // m_height > 0 if came here
 
-      m_mult_div_43_255[0] = 0;
-      for (uint16_t idx = 1; idx < (1u<<8); ++idx)
-        m_mult_div_43_255[idx] = (43u * (1u<<8)) / idx;
-
+      m_mult_div_43_255[0]       = 0;
       m_mult_div_43_255[(1u<<8)] = 0;
       for (uint16_t idx = 1; idx < (1u<<8); ++idx)
+      {
+        m_mult_div_43_255[idx]         = (43u  * (1u<<8)) / idx;
         m_mult_div_43_255[idx+(1u<<8)] = (255u * (1u<<8)) / idx;
+      }
 
       return true;
     }
