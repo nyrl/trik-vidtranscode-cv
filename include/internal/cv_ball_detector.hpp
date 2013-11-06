@@ -209,9 +209,11 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
 
       const uint32_t u32_hsv_ooo_val_x256   = static_cast<uint16_t>(u16_rgb_max)<<8; // get max in 8..15 bits
 
+      /* optimized by table based multiplication with power-2 divisor, simulate 255*(max-min)/max */
       const uint16_t u16_hsv_sat_x256       = static_cast<uint16_t>(s_FAST_mult255_div[u16_rgb_max])
                                             * static_cast<uint16_t>(u16_rgb_delta);
 
+      /* optimized by table based multiplication with power-2 divisor, simulate 43*(med-min)/(max-min) */
       const uint32_t u32_hsv_hue_mult43_div = _pack2(s_FAST_mult43_div[u16_rgb_delta],
                                                      s_FAST_mult43_div[u16_rgb_delta]);
       int16_t s16_hsv_hue_x256;
