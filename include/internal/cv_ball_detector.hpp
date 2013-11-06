@@ -603,12 +603,12 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
     }
 
 
-    void __attribute__((always_inline)) proceedRgbPixel(const TrikCvImageDimension _srcCol,
-                                                        const TrikCvImageDimension _srcRow,
-                                                        XDAS_UInt16* _rgbRow,
-                                                        const XDAS_UInt8 _r,
-                                                        const XDAS_UInt8 _g,
-                                                        const XDAS_UInt8 _b)
+    void __attribute__((deprecated)) DEPRECATED_proceedRgbPixel(const TrikCvImageDimension _srcCol,
+                                                                const TrikCvImageDimension _srcRow,
+                                                                XDAS_UInt16* _rgbRow,
+                                                                const XDAS_UInt8 _r,
+                                                                const XDAS_UInt8 _g,
+                                                                const XDAS_UInt8 _b)
     {
       if (testifyRgbPixel(_r, _g, _b))
       {
@@ -691,15 +691,15 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
       const Int16 y1c = static_cast<Int16>(298/4) * y1;
       const Int16 y2c = static_cast<Int16>(298/4) * y2;
 
-      proceedRgbPixel(_srcCol+0, _srcRow, _rgbRow,
-                      range<XDAS_Int16>(0, (r12 + y1c) >> 6, 255),
-                      range<XDAS_Int16>(0, (g12 + y1c) >> 6, 255),
-                      range<XDAS_Int16>(0, (b12 + y1c) >> 6, 255));
+      DEPRECATED_proceedRgbPixel(_srcCol+0, _srcRow, _rgbRow,
+                                 range<XDAS_Int16>(0, (r12 + y1c) >> 6, 255),
+                                 range<XDAS_Int16>(0, (g12 + y1c) >> 6, 255),
+                                 range<XDAS_Int16>(0, (b12 + y1c) >> 6, 255));
 
-      proceedRgbPixel(_srcCol+1, _srcRow, _rgbRow,
-                      range<XDAS_Int16>(0, (r12 + y2c) >> 6, 255),
-                      range<XDAS_Int16>(0, (g12 + y2c) >> 6, 255),
-                      range<XDAS_Int16>(0, (b12 + y2c) >> 6, 255));
+      DEPRECATED_proceedRgbPixel(_srcCol+1, _srcRow, _rgbRow,
+                                 range<XDAS_Int16>(0, (r12 + y2c) >> 6, 255),
+                                 range<XDAS_Int16>(0, (g12 + y2c) >> 6, 255),
+                                 range<XDAS_Int16>(0, (b12 + y2c) >> 6, 255));
     }
 
 
