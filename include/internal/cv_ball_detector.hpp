@@ -232,6 +232,7 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
           break;
         case 2: // max==green
         case 3: // max==green && max==blue
+        default: // impossible, actually
           s16_hsv_hue_x256 = static_cast<int16_t>((0x10000*1)/3)
                            + static_cast<int16_t>(_dotpn2(u32_hsv_hue_mult43_div,
                                                           _pack2(  u32_rgb_gb16, u32_rgb_or16)));
