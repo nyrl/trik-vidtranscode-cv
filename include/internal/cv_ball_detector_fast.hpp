@@ -103,7 +103,7 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
     void __attribute__((always_inline)) drawRgbPixel(uint16_t _srcCol,
                                                      uint16_t _srcRow,
                                                      const TrikCvImageBuffer& _outImage,
-                                                     const uint32_t _rgb888)
+                                                     const uint32_t _rgb888) const
     {
       assert(_srcRow < m_srcToDstRowConv.size());
       const uint16_t dstRow = m_srcToDstRowConv[_srcRow];
@@ -119,7 +119,7 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
     void __attribute__((always_inline)) drawRgbTargetCross(int16_t _srcCol,
                                                            int16_t _srcRow,
                                                            const TrikCvImageBuffer& _outImage,
-                                                           const uint32_t _rgb888)
+                                                           const uint32_t _rgb888) const
     {
       for (int adj = 10; adj < 20; ++adj)
       {
