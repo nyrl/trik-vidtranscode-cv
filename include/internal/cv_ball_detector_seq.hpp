@@ -51,15 +51,15 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
       *_rgb565ptr = ((_rgb888>>19)&0x001f) | ((_rgb888>>5)&0x07e0) | ((_rgb888<<8)&0xf800);
     }
 
-    void __attribute__((always_inline)) drawRgbPixel(const uint32_t _srcCol,
-                                                     const uint32_t _srcRow,
+    void __attribute__((always_inline)) drawRgbPixel(const int32_t _srcCol,
+                                                     const int32_t _srcRow,
                                                      const TrikCvImageBuffer& _outImage,
                                                      const uint32_t _rgb888) const
     {
-      assert(_srcRow < m_srcToDstRowConv.size());
+      assert(_srcRow >= 0 && _srcRow < m_srcToDstRowConv.size());
       const uint32_t dstRow = m_srcToDstRowConv[_srcRow];
 
-      assert(_srcCol < m_srcToDstColConv.size());
+      assert(_srcCol >= 0 && _srcCol < m_srcToDstColConv.size());
       const uint32_t dstCol = m_srcToDstColConv[_srcCol];
 
       const uint32_t dstOfs = dstRow*m_outImageDesc.m_lineLength + dstCol*sizeof(uint16_t);
@@ -67,10 +67,10 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
       writeRgb565Pixel(rgbPtr, _rgb888);
     }
 
-    void DEBUG_INLINE drawRgbTargetCross(const int32_t _srcCol,
-                                         const int32_t _srcRow,
-                                         const TrikCvImageBuffer& _outImage,
-                                         const uint32_t _rgb888) const
+    void __attribute__((always_inline)) drawRgbTargetCross(const int32_t _srcCol,
+                                                           const int32_t _srcRow,
+                                                           const TrikCvImageBuffer& _outImage,
+                                                           const uint32_t _rgb888) const
     {
       const int32_t widthBot  = 0;
       const int32_t widthTop  = m_inImageDesc.m_width-1;

@@ -46,64 +46,69 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
       *_rgb565ptr = ((_rgb888>>19)&0x001f) | ((_rgb888>>5)&0x07e0) | ((_rgb888<<8)&0xf800);
     }
 
-    void __attribute__((always_inline)) drawRgbPixel(const uint16_t _srcCol,
-                                                     const uint16_t _srcRow,
+    void __attribute__((always_inline)) drawRgbPixel(const int32_t _srcCol,
+                                                     const int32_t _srcRow,
                                                      const TrikCvImageBuffer& _outImage,
                                                      const uint32_t _rgb888) const
     {
-      assert(_srcRow < m_srcToDstRowConv.size());
-      const uint16_t dstRow = m_srcToDstRowConv[_srcRow];
+      assert(_srcRow >= 0 && _srcRow < m_srcToDstRowConv.size());
+      const uint32_t dstRow = m_srcToDstRowConv[_srcRow];
 
-      assert(_srcCol < m_srcToDstColConv.size());
-      const uint16_t dstCol = m_srcToDstColConv[_srcCol];
+      assert(_srcCol >= 0 && _srcCol < m_srcToDstColConv.size());
+      const uint32_t dstCol = m_srcToDstColConv[_srcCol];
 
       const uint32_t dstOfs = dstRow*m_outImageDesc.m_lineLength + dstCol*sizeof(uint16_t);
       uint16_t* restrict rgbPtr = reinterpret_cast<uint16_t*>(_outImage.m_ptr + dstOfs);
       writeRgb565Pixel(rgbPtr, _rgb888);
     }
 
-    void __attribute__((always_inline)) drawRgbTargetCross(const int16_t _srcCol,
-                                                           const int16_t _srcRow,
+    void __attribute__((always_inline)) drawRgbTargetCross(const int32_t _srcCol,
+                                                           const int32_t _srcRow,
                                                            const TrikCvImageBuffer& _outImage,
                                                            const uint32_t _rgb888) const
     {
+      const int32_t widthBot  = 0;
+      const int32_t widthTop  = m_inImageDesc.m_width-1;
+      const int32_t heightBot = 0;
+      const int32_t heightTop = m_inImageDesc.m_height-1;
+
       for (int adj = 10; adj < 20; ++adj)
       {
-        drawRgbPixel(range<int16_t>(0, _srcCol-adj, m_inImageDesc.m_width-1),
-                     range<int16_t>(0, _srcRow-1  , m_inImageDesc.m_height-1),
+        drawRgbPixel(range<int32_t>(widthBot,  _srcCol-adj, widthTop),
+                     range<int32_t>(heightBot, _srcRow-1  , heightTop),
                      _outImage, _rgb888);
-        drawRgbPixel(range<int16_t>(0, _srcCol-adj, m_inImageDesc.m_width-1),
-                     range<int16_t>(0, _srcRow    , m_inImageDesc.m_height-1),
+        drawRgbPixel(range<int32_t>(widthBot,  _srcCol-adj, widthTop),
+                     range<int32_t>(heightBot, _srcRow    , heightTop),
                      _outImage, _rgb888);
-        drawRgbPixel(range<int16_t>(0, _srcCol-adj, m_inImageDesc.m_width-1),
-                     range<int16_t>(0, _srcRow+1  , m_inImageDesc.m_height-1),
+        drawRgbPixel(range<int32_t>(widthBot,  _srcCol-adj, widthTop),
+                     range<int32_t>(heightBot, _srcRow+1  , heightTop),
                      _outImage, _rgb888);
-        drawRgbPixel(range<int16_t>(0, _srcCol+adj, m_inImageDesc.m_width-1),
-                     range<int16_t>(0, _srcRow-1  , m_inImageDesc.m_height-1),
+        drawRgbPixel(range<int32_t>(widthBot,  _srcCol+adj, widthTop),
+                     range<int32_t>(heightBot, _srcRow-1  , heightTop),
                      _outImage, _rgb888);
-        drawRgbPixel(range<int16_t>(0, _srcCol+adj, m_inImageDesc.m_width-1),
-                     range<int16_t>(0, _srcRow    , m_inImageDesc.m_height-1),
+        drawRgbPixel(range<int32_t>(widthBot,  _srcCol+adj, widthTop),
+                     range<int32_t>(heightBot, _srcRow    , heightTop),
                      _outImage, _rgb888);
-        drawRgbPixel(range<int16_t>(0, _srcCol+adj, m_inImageDesc.m_width-1),
-                     range<int16_t>(0, _srcRow+1  , m_inImageDesc.m_height-1),
+        drawRgbPixel(range<int32_t>(widthBot,  _srcCol+adj, widthTop),
+                     range<int32_t>(heightBot, _srcRow+1  , heightTop),
                      _outImage, _rgb888);
-        drawRgbPixel(range<int16_t>(0, _srcCol-1  , m_inImageDesc.m_width-1),
-                     range<int16_t>(0, _srcRow-adj, m_inImageDesc.m_height-1),
+        drawRgbPixel(range<int32_t>(widthBot,  _srcCol-1  , widthTop),
+                     range<int32_t>(heightBot, _srcRow-adj, heightTop),
                      _outImage, _rgb888);
-        drawRgbPixel(range<int16_t>(0, _srcCol    , m_inImageDesc.m_width-1),
-                     range<int16_t>(0, _srcRow-adj, m_inImageDesc.m_height-1),
+        drawRgbPixel(range<int32_t>(widthBot,  _srcCol    , widthTop),
+                     range<int32_t>(heightBot, _srcRow-adj, heightTop),
                      _outImage, _rgb888);
-        drawRgbPixel(range<int16_t>(0, _srcCol+1  , m_inImageDesc.m_width-1),
-                     range<int16_t>(0, _srcRow-adj, m_inImageDesc.m_height-1),
+        drawRgbPixel(range<int32_t>(widthBot,  _srcCol+1  , widthTop),
+                     range<int32_t>(heightBot, _srcRow-adj, heightTop),
                      _outImage, _rgb888);
-        drawRgbPixel(range<int16_t>(0, _srcCol-1  , m_inImageDesc.m_width-1),
-                     range<int16_t>(0, _srcRow+adj, m_inImageDesc.m_height-1),
+        drawRgbPixel(range<int32_t>(widthBot,  _srcCol-1  , widthTop),
+                     range<int32_t>(heightBot, _srcRow+adj, heightTop),
                      _outImage, _rgb888);
-        drawRgbPixel(range<int16_t>(0, _srcCol    , m_inImageDesc.m_width-1),
-                     range<int16_t>(0, _srcRow+adj, m_inImageDesc.m_height-1),
+        drawRgbPixel(range<int32_t>(widthBot,  _srcCol    , widthTop),
+                     range<int32_t>(heightBot, _srcRow+adj, heightTop),
                      _outImage, _rgb888);
-        drawRgbPixel(range<int16_t>(0, _srcCol+1  , m_inImageDesc.m_width-1),
-                     range<int16_t>(0, _srcRow+adj, m_inImageDesc.m_height-1),
+        drawRgbPixel(range<int32_t>(widthBot,  _srcCol+1  , widthTop),
+                     range<int32_t>(heightBot, _srcRow+adj, heightTop),
                      _outImage, _rgb888);
       }
     }
