@@ -159,39 +159,39 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
       const uint32_t u32_rgb_or16    = _unpkhu4(_rgb888);
       const uint32_t u32_rgb_gb16    = _unpklu4(_rgb888);
       const uint32_t u32_rgb_max2    = _maxu4(_rgb888, _rgb888>>8);
-      const uint16_t u16_rgb_max     = _clr(_maxu4(u32_rgb_max2, u32_rgb_max2>>8), 8, 31); // top 3 bytes were non-zeroes!
-      const uint32_t u32_rgb_max_max = _pack2(u16_rgb_max, u16_rgb_max);
+      const uint32_t u32_rgb_max     = _clr(_maxu4(u32_rgb_max2, u32_rgb_max2>>8), 8, 31); // top 3 bytes were non-zeroes!
+      const uint32_t u32_rgb_max_max = _pack2(u32_rgb_max, u32_rgb_max);
 
-      const uint32_t u32_hsv_ooo_val_x256   = static_cast<uint16_t>(u16_rgb_max)<<8; // get max in 8..15 bits
+      const uint32_t u32_hsv_ooo_val_x256   = u32_rgb_max<<8; // get max in 8..15 bits
 
       const uint32_t u32_rgb_min2    = _minu4(_rgb888, _rgb888>>8);
-      const uint16_t u16_rgb_min     = _minu4(u32_rgb_min2, u32_rgb_min2>>8); // top 3 bytes are zeroes
-      const uint16_t u16_rgb_delta   = u16_rgb_max-u16_rgb_min;
+      const uint32_t u32_rgb_min     = _minu4(u32_rgb_min2, u32_rgb_min2>>8); // top 3 bytes are zeroes
+      const uint32_t u32_rgb_delta   = u32_rgb_max-u32_rgb_min;
 
       /* optimized by table based multiplication with power-2 divisor, simulate 255*(max-min)/max */
-      const uint16_t u16_hsv_sat_x256       = static_cast<uint16_t>(s_mult255_div[u16_rgb_max])
-                                            * static_cast<uint16_t>(u16_rgb_delta);
+      const uint32_t u32_hsv_sat_x256       = static_cast<uint32_t>(s_mult255_div[u32_rgb_max])
+                                            * static_cast<uint32_t>(u32_rgb_delta);
 
       /* optimized by table based multiplication with power-2 divisor, simulate 43*(med-min)/(max-min) */
-      const uint32_t u32_hsv_hue_mult43_div = _pack2(s_mult43_div[u16_rgb_delta],
-                                                     s_mult43_div[u16_rgb_delta]);
-      int16_t s16_hsv_hue_x256;
+      const uint32_t u32_hsv_hue_mult43_div = _pack2(static_cast<uint32_t>(s_mult43_div[u32_rgb_delta]),
+                                                     static_cast<uint32_t>(s_mult43_div[u32_rgb_delta]));
+      int32_t s32_hsv_hue_x256;
       const uint32_t u32_rgb_cmp = _cmpeq2(u32_rgb_max_max, u32_rgb_gb16);
       if (u32_rgb_cmp == 0)
-          s16_hsv_hue_x256 = static_cast<int16_t>((0x10000*0)/3)
-                           + static_cast<int16_t>(_dotpn2(u32_hsv_hue_mult43_div,
+          s32_hsv_hue_x256 = static_cast<int32_t>((0x10000*0)/3)
+                           + static_cast<int32_t>(_dotpn2(u32_hsv_hue_mult43_div,
                                                           _packhl2(u32_rgb_gb16, u32_rgb_gb16)));
       else if (u32_rgb_cmp == 1)
-          s16_hsv_hue_x256 = static_cast<int16_t>((0x10000*2)/3)
-                           + static_cast<int16_t>(_dotpn2(u32_hsv_hue_mult43_div,
+          s32_hsv_hue_x256 = static_cast<int32_t>((0x10000*2)/3)
+                           + static_cast<int32_t>(_dotpn2(u32_hsv_hue_mult43_div,
                                                           _packlh2(u32_rgb_or16, u32_rgb_gb16)));
       else
-          s16_hsv_hue_x256 = static_cast<int16_t>((0x10000*1)/3)
-                           + static_cast<int16_t>(_dotpn2(u32_hsv_hue_mult43_div,
+          s32_hsv_hue_x256 = static_cast<int32_t>((0x10000*1)/3)
+                           + static_cast<int32_t>(_dotpn2(u32_hsv_hue_mult43_div,
                                                           _pack2(  u32_rgb_gb16, u32_rgb_or16)));
 
-      const uint16_t u16_hsv_hue_x256      = static_cast<uint16_t>(s16_hsv_hue_x256);
-      const uint32_t u32_hsv_sat_hue_x256  = _pack2(u16_hsv_sat_x256, u16_hsv_hue_x256);
+      const uint32_t u32_hsv_hue_x256      = static_cast<uint32_t>(s32_hsv_hue_x256);
+      const uint32_t u32_hsv_sat_hue_x256  = _pack2(u32_hsv_sat_x256, u32_hsv_hue_x256);
 
       const uint32_t u32_hsv               = _packh4(u32_hsv_ooo_val_x256, u32_hsv_sat_hue_x256);
       return u32_hsv;
