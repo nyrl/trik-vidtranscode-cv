@@ -169,12 +169,12 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
       const uint32_t u32_rgb_delta   = u32_rgb_max-u32_rgb_min;
 
       /* optimized by table based multiplication with power-2 divisor, simulate 255*(max-min)/max */
-      const uint32_t u32_hsv_sat_x256       = static_cast<uint32_t>(s_mult255_div[u32_rgb_max])
-                                            * static_cast<uint32_t>(u32_rgb_delta);
+      const uint32_t u32_hsv_sat_x256       = s_mult255_div[u32_rgb_max]
+                                            * u32_rgb_delta;
 
       /* optimized by table based multiplication with power-2 divisor, simulate 43*(med-min)/(max-min) */
-      const uint32_t u32_hsv_hue_mult43_div = _pack2(static_cast<uint32_t>(s_mult43_div[u32_rgb_delta]),
-                                                     static_cast<uint32_t>(s_mult43_div[u32_rgb_delta]));
+      const uint32_t u32_hsv_hue_mult43_div = _pack2(s_mult43_div[u32_rgb_delta],
+                                                     s_mult43_div[u32_rgb_delta]);
       int32_t s32_hsv_hue_x256;
       const uint32_t u32_rgb_cmp = _cmpeq2(u32_rgb_max_max, u32_rgb_gb16);
       if (u32_rgb_cmp == 0)
@@ -241,20 +241,20 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
     {
       const int8_t* restrict srcImageRow = _inImage.m_ptr;
       uint64_t* restrict rgb2x888ptr = reinterpret_cast<uint64_t*>(s_rgb888);
-      const uint16_t height     = m_inImageDesc.m_height;
+      const uint32_t height     = m_inImageDesc.m_height;
       const uint32_t lineLength = m_inImageDesc.m_lineLength;
-      const uint16_t width4     = m_inImageDesc.m_width/4;
+      const uint32_t width4     = m_inImageDesc.m_width/4;
 
       assert(m_inImageDesc.m_height % 4 == 0); // verified in setup
 #pragma MUST_ITERATE(4, ,4)
-      for (uint16_t srcRow=0; srcRow < height; srcRow+=1)
+      for (uint32_t srcRow=0; srcRow < height; srcRow+=1)
       {
         assert(reinterpret_cast<intptr_t>(srcImageRow) % 8 == 0); // let's pray...
         const uint64_t* restrict srcImagex2 = reinterpret_cast<const uint64_t*>(srcImageRow);
 
         assert(m_inImageDesc.m_width % 32 == 0); // verified in setup
 #pragma MUST_ITERATE(32/4, ,32/4)
-        for (uint16_t remains = width4; remains > 0; --remains)
+        for (uint32_t remains = width4; remains > 0; --remains)
         {
           const uint64_t yuyv2x = *srcImagex2++;
           *rgb2x888ptr++ = convert2xYuyvToRgb888(_loll(yuyv2x));
@@ -286,8 +286,8 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
     {
       const uint64_t* restrict rgb888x2ptr = reinterpret_cast<uint64_t*>(s_rgb888);
       const uint64_t* restrict hsvx2ptr    = reinterpret_cast<uint64_t*>(s_hsv);
-      const uint16_t width          = m_inImageDesc.m_width;
-      const uint16_t height         = m_inImageDesc.m_height;
+      const uint32_t width          = m_inImageDesc.m_width;
+      const uint32_t height         = m_inImageDesc.m_height;
       const uint32_t dstLineLength  = m_outImageDesc.m_lineLength;
       const uint64_t u64_hsv_range  = m_detectRange;
       const uint32_t u32_hsv_expect = m_detectExpected;
@@ -297,16 +297,15 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
 
       assert(m_inImageDesc.m_height % 4 == 0); // verified in setup
 #pragma MUST_ITERATE(4, ,4)
-      for (uint16_t srcRow=0; srcRow < height; ++srcRow)
+      for (uint32_t srcRow=0; srcRow < height; ++srcRow)
       {
         assert(srcRow < m_srcToDstRowConv.size());
-        const uint16_t dstRow = m_srcToDstRowConv[srcRow];
-        const uint32_t dstRowOfs = dstRow*dstLineLength;
+        const uint32_t dstRowOfs = m_srcToDstRowConv[srcRow]*dstLineLength;
         uint16_t* restrict dstImageRow = reinterpret_cast<uint16_t*>(_outImage.m_ptr + dstRowOfs);
 
         assert(m_inImageDesc.m_width % 32 == 0); // verified in setup
 #pragma MUST_ITERATE(32/2, ,32/2)
-        for (uint16_t srcCol=0; srcCol < width; srcCol+=2)
+        for (uint32_t srcCol=0; srcCol < width; srcCol+=2)
         {
           assert(_srcCol+1 < m_srcToDstColConv.size());
           const uint16_t dstCol1 = m_srcToDstColConv[srcCol+0];
@@ -354,16 +353,16 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
         return false;
 
       m_srcToDstColConv.resize(m_inImageDesc.m_width);
-      for (uint16_t srcCol=0; srcCol < m_srcToDstColConv.size(); ++srcCol)
+      for (uint32_t srcCol=0; srcCol < m_srcToDstColConv.size(); ++srcCol)
         m_srcToDstColConv[srcCol] = (srcCol*m_outImageDesc.m_width) / m_inImageDesc.m_width; // m_width > 0 if came here
 
       m_srcToDstRowConv.resize(m_inImageDesc.m_height);
-      for (uint16_t srcRow=0; srcRow < m_srcToDstRowConv.size(); ++srcRow)
+      for (uint32_t srcRow=0; srcRow < m_srcToDstRowConv.size(); ++srcRow)
         m_srcToDstRowConv[srcRow] = (srcRow*m_outImageDesc.m_height) / m_inImageDesc.m_height; // m_height > 0 if came here
 
       s_mult43_div[0] = 0;
       s_mult255_div[0] = 0;
-      for (uint16_t idx = 1; idx < (1u<<8); ++idx)
+      for (uint32_t idx = 1; idx < (1u<<8); ++idx)
       {
         s_mult43_div[ idx] = (43u  * (1u<<8)) / idx;
         s_mult255_div[idx] = (255u * (1u<<8)) / idx;
