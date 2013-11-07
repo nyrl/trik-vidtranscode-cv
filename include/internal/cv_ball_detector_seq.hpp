@@ -380,12 +380,12 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
       m_targetY = 0;
       m_targetPoints = 0;
 
-      uint8_t detectHueFrom = range<int16_t>(0, (_inArgs.detectHueFrom * 255) / 359, 255); // scaling 0..359 to 0..255
-      uint8_t detectHueTo   = range<int16_t>(0, (_inArgs.detectHueTo   * 255) / 359, 255); // scaling 0..359 to 0..255
-      uint8_t detectSatFrom = range<int16_t>(0, (_inArgs.detectSatFrom * 255) / 100, 255); // scaling 0..100 to 0..255
-      uint8_t detectSatTo   = range<int16_t>(0, (_inArgs.detectSatTo   * 255) / 100, 255); // scaling 0..100 to 0..255
-      uint8_t detectValFrom = range<int16_t>(0, (_inArgs.detectValFrom * 255) / 100, 255); // scaling 0..100 to 0..255
-      uint8_t detectValTo   = range<int16_t>(0, (_inArgs.detectValTo   * 255) / 100, 255); // scaling 0..100 to 0..255
+      uint8_t detectHueFrom = range<int32_t>(0, (static_cast<int32_t>(_inArgs.detectHueFrom) * 255) / 359, 255); // scaling 0..359 to 0..255
+      uint8_t detectHueTo   = range<int32_t>(0, (static_cast<int32_t>(_inArgs.detectHueTo  ) * 255) / 359, 255); // scaling 0..359 to 0..255
+      uint8_t detectSatFrom = range<int32_t>(0, (static_cast<int32_t>(_inArgs.detectSatFrom) * 255) / 100, 255); // scaling 0..100 to 0..255
+      uint8_t detectSatTo   = range<int32_t>(0, (static_cast<int32_t>(_inArgs.detectSatTo  ) * 255) / 100, 255); // scaling 0..100 to 0..255
+      uint8_t detectValFrom = range<int32_t>(0, (static_cast<int32_t>(_inArgs.detectValFrom) * 255) / 100, 255); // scaling 0..100 to 0..255
+      uint8_t detectValTo   = range<int32_t>(0, (static_cast<int32_t>(_inArgs.detectValTo  ) * 255) / 100, 255); // scaling 0..100 to 0..255
 
       if (detectHueFrom <= detectHueTo)
       {
