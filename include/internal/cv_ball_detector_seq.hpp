@@ -210,21 +210,17 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
         assert(m_inImageDesc.m_width % 32 == 0); // verified in setup
         assert(srcImagex2To-srcImagex2 == m_inImageDesc.m_width/4); // should be so...
 #pragma MUST_ITERATE(32/4, ,32/4)
-        for (; srcImagex2 != srcImagex2To; ++srcImagex2)
+        while (srcImagex2 != srcImagex2To)
         {
-          const uint64_t yuyv2x = *srcImagex2;
+          const uint64_t yuyv2x = *srcImagex2++;
 
           const uint64_t rgb12 = convert2xYuyvToRgb888(_loll(yuyv2x));
-          const uint32_t hsv1  = convertRgb888ToHsv(_loll(rgb12));
-          *rgb888hsvptr++ = _itoll(_loll(rgb12), hsv1);
-          const uint32_t hsv2  = convertRgb888ToHsv(_hill(rgb12));
-          *rgb888hsvptr++ = _itoll(_hill(rgb12), hsv2);
+          *rgb888hsvptr++ = _itoll(_loll(rgb12), convertRgb888ToHsv(_loll(rgb12)));
+          *rgb888hsvptr++ = _itoll(_hill(rgb12), convertRgb888ToHsv(_hill(rgb12)));
 
           const uint64_t rgb34 = convert2xYuyvToRgb888(_hill(yuyv2x));
-          const uint32_t hsv3  = convertRgb888ToHsv(_loll(rgb34));
-          *rgb888hsvptr++ = _itoll(_loll(rgb34), hsv3);
-          const uint32_t hsv4  = convertRgb888ToHsv(_hill(rgb34));
-          *rgb888hsvptr++ = _itoll(_hill(rgb34), hsv4);
+          *rgb888hsvptr++ = _itoll(_loll(rgb34), convertRgb888ToHsv(_loll(rgb34)));
+          *rgb888hsvptr++ = _itoll(_hill(rgb34), convertRgb888ToHsv(_hill(rgb34)));
         }
 
         srcImageRow += lineLength;
@@ -261,13 +257,8 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
 
           const bool det = detectHsvPixel(_loll(rgb888hsv), u64_hsv_range, u32_hsv_expect);
           targetPointsPerRow += det;
-          if (det)
-          {
-            targetPointsCol += srcCol;
-            writeRgb565Pixel(dstImageRow+dstCol, 0xffff00);
-          }
-          else
-            writeRgb565Pixel(dstImageRow+dstCol, _hill(rgb888hsv));
+          targetPointsCol += det?srcCol:0;
+          writeRgb565Pixel(dstImageRow+dstCol, det?0xffff00:_hill(rgb888hsv));
         }
         m_targetX      += targetPointsCol;
         m_targetY      += srcRow*targetPointsPerRow;
