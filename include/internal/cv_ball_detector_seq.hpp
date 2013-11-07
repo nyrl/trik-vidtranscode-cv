@@ -289,9 +289,9 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
       const uint32_t srcToDstShift  = m_srcToDstShift;
       const uint64_t u64_hsv_range  = m_detectRange;
       const uint32_t u32_hsv_expect = m_detectExpected;
-      int32_t  targetX = 0;
-      int32_t  targetY = 0;
-      uint32_t targetPoints = 0;
+      uint32_t targetPointsPerRowEven;
+      uint32_t targetPointsPerRowOdd;
+      uint32_t targetPointsCol;
 
       assert(m_inImageDesc.m_height % 4 == 0); // verified in setup
 #pragma MUST_ITERATE(4, ,4)
@@ -300,6 +300,9 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
         const uint32_t dstRow = srcRow >> srcToDstShift;
         uint16_t* restrict dstImageRow = reinterpret_cast<uint16_t*>(_outImage.m_ptr + dstRow*dstLineLength);
 
+        targetPointsPerRowEven = 0;
+        targetPointsPerRowOdd = 0;
+        targetPointsCol = 0;
         assert(m_inImageDesc.m_width % 32 == 0); // verified in setup
 #pragma MUST_ITERATE(32/2, ,32/2)
         for (uint32_t srcCol=0; srcCol < width; srcCol+=2)
@@ -311,9 +314,8 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
 
           if (detectHsvPixel(_loll(hsvx2), u64_hsv_range, u32_hsv_expect))
           {
-            targetX += srcCol+0;
-            targetY += srcRow;
-            targetPoints += 1;
+            targetPointsCol += srcCol;
+            ++targetPointsPerRowEven;
             writeRgb565Pixel(dstImageRow+dstCol1, 0xffff00);
           }
           else
@@ -321,19 +323,17 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
 
           if (detectHsvPixel(_hill(hsvx2), u64_hsv_range, u32_hsv_expect))
           {
-            targetX += srcCol+1;
-            targetY += srcRow;
-            targetPoints += 1;
+            targetPointsCol += srcCol;
+            ++targetPointsPerRowOdd;
             writeRgb565Pixel(dstImageRow+dstCol2, 0xffff00);
           }
           else
             writeRgb565Pixel(dstImageRow+dstCol2, _hill(rgb888x2));
         }
+        m_targetX      += targetPointsCol + targetPointsPerRowOdd;
+        m_targetY      += dstRow*(targetPointsPerRowEven+targetPointsPerRowOdd);
+        m_targetPoints += targetPointsPerRowEven+targetPointsPerRowOdd;
       }
-
-      m_targetX = targetX;
-      m_targetY = targetY;
-      m_targetPoints = targetPoints;
     }
 
   public:
