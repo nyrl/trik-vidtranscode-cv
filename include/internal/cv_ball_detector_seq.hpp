@@ -331,7 +331,7 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
             writeRgb565Pixel(dstImageRow+dstCol2, _hill(rgb888x2));
         }
         m_targetX      += targetPointsCol + targetPointsPerRowOdd;
-        m_targetY      += dstRow*(targetPointsPerRowEven+targetPointsPerRowOdd);
+        m_targetY      += srcRow*(targetPointsPerRowEven+targetPointsPerRowOdd);
         m_targetPoints += targetPointsPerRowEven+targetPointsPerRowOdd;
       }
     }
