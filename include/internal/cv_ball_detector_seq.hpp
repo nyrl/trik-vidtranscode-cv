@@ -17,14 +17,11 @@
 /* **** **** **** **** **** */ namespace cv /* **** **** **** **** **** */ {
 
 
-#define DEBUG_COMBINE_YUYV_RGB_HSV
-
 
 
 static uint16_t s_mult43_div[(1u<<8)];
 static uint16_t s_mult255_div[(1u<<8)];
-static uint32_t s_rgb888[640*480];
-static uint32_t s_hsv[640*480];
+static uint64_t s_rgb888hsv[640*480];
 
 
 template <>
@@ -194,12 +191,10 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
       return u32_hsv;
     }
 
-#ifdef DEBUG_COMBINE_YUYV_RGB_HSV
     void DEBUG_INLINE convertImageYuyvToHsv(const TrikCvImageBuffer& _inImage)
     {
       const int8_t* restrict srcImageRow = _inImage.m_ptr;
-      uint64_t* restrict rgb2x888ptr = reinterpret_cast<uint64_t*>(s_rgb888);
-      uint64_t* restrict hsvx2ptr    = reinterpret_cast<uint64_t*>(s_hsv);
+      uint64_t* restrict rgb888hsvptr    = s_rgb888hsv;
       const uint32_t height     = m_inImageDesc.m_height;
       const uint32_t lineLength = m_inImageDesc.m_lineLength;
       const uint32_t widthxu16  = m_inImageDesc.m_width*sizeof(uint16_t);
@@ -220,77 +215,32 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
           const uint64_t yuyv2x = *srcImagex2;
 
           const uint64_t rgb12 = convert2xYuyvToRgb888(_loll(yuyv2x));
-          *rgb2x888ptr++ = rgb12;
-          *hsvx2ptr++ = _itoll(convertRgb888ToHsv(_hill(rgb12)),
-                               convertRgb888ToHsv(_loll(rgb12)));
+          const uint32_t hsv1  = convertRgb888ToHsv(_loll(rgb12));
+          *rgb888hsvptr++ = _itoll(_loll(rgb12), hsv1);
+          const uint32_t hsv2  = convertRgb888ToHsv(_hill(rgb12));
+          *rgb888hsvptr++ = _itoll(_hill(rgb12), hsv2);
 
           const uint64_t rgb34 = convert2xYuyvToRgb888(_hill(yuyv2x));
-          *rgb2x888ptr++ = rgb34;
-          *hsvx2ptr++ = _itoll(convertRgb888ToHsv(_hill(rgb34)),
-                               convertRgb888ToHsv(_loll(rgb34)));
+          const uint32_t hsv3  = convertRgb888ToHsv(_loll(rgb34));
+          *rgb888hsvptr++ = _itoll(_loll(rgb34), hsv3);
+          const uint32_t hsv4  = convertRgb888ToHsv(_hill(rgb34));
+          *rgb888hsvptr++ = _itoll(_hill(rgb34), hsv4);
         }
 
         srcImageRow += lineLength;
       }
     }
-#else
-    void DEBUG_INLINE convertImageYuyvToRgb888(const TrikCvImageBuffer& _inImage)
-    {
-      const int8_t* restrict srcImageRow = _inImage.m_ptr;
-      uint64_t* restrict rgb2x888ptr = reinterpret_cast<uint64_t*>(s_rgb888);
-      const uint32_t height     = m_inImageDesc.m_height;
-      const uint32_t lineLength = m_inImageDesc.m_lineLength;
-      const uint32_t width4     = m_inImageDesc.m_width/4;
-
-      assert(m_inImageDesc.m_height % 4 == 0); // verified in setup
-#pragma MUST_ITERATE(4, ,4)
-      for (uint32_t srcRow=0; srcRow < height; srcRow+=1)
-      {
-        assert(reinterpret_cast<intptr_t>(srcImageRow) % 8 == 0); // let's pray...
-        const uint64_t* restrict srcImagex2 = reinterpret_cast<const uint64_t*>(srcImageRow);
-
-        assert(m_inImageDesc.m_width % 32 == 0); // verified in setup
-#pragma MUST_ITERATE(32/4, ,32/4)
-        for (uint32_t remains = width4; remains > 0; --remains)
-        {
-          const uint64_t yuyv2x = *srcImagex2++;
-          *rgb2x888ptr++ = convert2xYuyvToRgb888(_loll(yuyv2x));
-          *rgb2x888ptr++ = convert2xYuyvToRgb888(_hill(yuyv2x));
-        }
-
-        srcImageRow += lineLength;
-      }
-    }
-
-    void DEBUG_INLINE convertImageRgb888ToHsv()
-    {
-      const uint64_t* restrict rgb888x2ptr = reinterpret_cast<uint64_t*>(s_rgb888);
-      uint64_t* restrict hsvx2ptr          = reinterpret_cast<uint64_t*>(s_hsv);
-
-      uint32_t dimx2 = (m_inImageDesc.m_width*m_inImageDesc.m_height)/2;
-      assert(dimx2 % (32*4/2) == 0); // m_width%32, m_height%4, two pixels per loop
-#pragma MUST_ITERATE((32*4)/2, ,(32*4)/2)
-      for (; dimx2 > 0; --dimx2)
-      {
-        const uint64_t rgb888x2 = *rgb888x2ptr++;
-        *hsvx2ptr++ = _itoll(convertRgb888ToHsv(_hill(rgb888x2)),
-                             convertRgb888ToHsv(_loll(rgb888x2)));
-      }
-    }
-#endif
 
     void DEBUG_INLINE proceedImageHsv(TrikCvImageBuffer& _outImage)
     {
-      const uint64_t* restrict rgb888x2ptr = reinterpret_cast<uint64_t*>(s_rgb888);
-      const uint64_t* restrict hsvx2ptr    = reinterpret_cast<uint64_t*>(s_hsv);
+      const uint64_t* restrict rgb888hsvptr = s_rgb888hsv;
       const uint32_t width          = m_inImageDesc.m_width;
       const uint32_t height         = m_inImageDesc.m_height;
       const uint32_t dstLineLength  = m_outImageDesc.m_lineLength;
       const uint32_t srcToDstShift  = m_srcToDstShift;
       const uint64_t u64_hsv_range  = m_detectRange;
       const uint32_t u32_hsv_expect = m_detectExpected;
-      uint32_t targetPointsPerRowEven;
-      uint32_t targetPointsPerRowOdd;
+      uint32_t targetPointsPerRow;
       uint32_t targetPointsCol;
 
       assert(m_inImageDesc.m_height % 4 == 0); // verified in setup
@@ -300,39 +250,28 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
         const uint32_t dstRow = srcRow >> srcToDstShift;
         uint16_t* restrict dstImageRow = reinterpret_cast<uint16_t*>(_outImage.m_ptr + dstRow*dstLineLength);
 
-        targetPointsPerRowEven = 0;
-        targetPointsPerRowOdd = 0;
+        targetPointsPerRow = 0;
         targetPointsCol = 0;
         assert(m_inImageDesc.m_width % 32 == 0); // verified in setup
-#pragma MUST_ITERATE(32/2, ,32/2)
-        for (uint32_t srcCol=0; srcCol < width; srcCol+=2)
+#pragma MUST_ITERATE(32, ,32)
+        for (uint32_t srcCol=0; srcCol < width; ++srcCol)
         {
-          const uint32_t dstCol1 = (srcCol+0) >> srcToDstShift;
-          const uint32_t dstCol2 = (srcCol+1) >> srcToDstShift;
-          const uint64_t rgb888x2 = *rgb888x2ptr++;
-          const uint64_t hsvx2    = *hsvx2ptr++;
+          const uint32_t dstCol    = srcCol >> srcToDstShift;
+          const uint64_t rgb888hsv = *rgb888hsvptr++;
 
-          if (detectHsvPixel(_loll(hsvx2), u64_hsv_range, u32_hsv_expect))
+          const bool det = detectHsvPixel(_loll(rgb888hsv), u64_hsv_range, u32_hsv_expect);
+          targetPointsPerRow += det;
+          if (det)
           {
             targetPointsCol += srcCol;
-            ++targetPointsPerRowEven;
-            writeRgb565Pixel(dstImageRow+dstCol1, 0xffff00);
+            writeRgb565Pixel(dstImageRow+dstCol, 0xffff00);
           }
           else
-            writeRgb565Pixel(dstImageRow+dstCol1, _loll(rgb888x2));
-
-          if (detectHsvPixel(_hill(hsvx2), u64_hsv_range, u32_hsv_expect))
-          {
-            targetPointsCol += srcCol;
-            ++targetPointsPerRowOdd;
-            writeRgb565Pixel(dstImageRow+dstCol2, 0xffff00);
-          }
-          else
-            writeRgb565Pixel(dstImageRow+dstCol2, _hill(rgb888x2));
+            writeRgb565Pixel(dstImageRow+dstCol, _hill(rgb888hsv));
         }
-        m_targetX      += targetPointsCol + targetPointsPerRowOdd;
-        m_targetY      += srcRow*(targetPointsPerRowEven+targetPointsPerRowOdd);
-        m_targetPoints += targetPointsPerRowEven+targetPointsPerRowOdd;
+        m_targetX      += targetPointsCol;
+        m_targetY      += srcRow*targetPointsPerRow;
+        m_targetPoints += targetPointsPerRow;
       }
     }
 
