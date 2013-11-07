@@ -176,12 +176,12 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
       const uint32_t u32_hsv_hue_mult43_div = _pack2(s_mult43_div[u16_rgb_delta],
                                                      s_mult43_div[u16_rgb_delta]);
       int16_t s16_hsv_hue_x256;
-      const uint8_t u8_rgb_cmp = _cmpeq2(u32_rgb_max_max, u32_rgb_gb16);
-      if (u8_rgb_cmp == 0)
+      const uint32_t u32_rgb_cmp = _cmpeq2(u32_rgb_max_max, u32_rgb_gb16);
+      if (u32_rgb_cmp == 0)
           s16_hsv_hue_x256 = static_cast<int16_t>((0x10000*0)/3)
                            + static_cast<int16_t>(_dotpn2(u32_hsv_hue_mult43_div,
                                                           _packhl2(u32_rgb_gb16, u32_rgb_gb16)));
-      else if (u8_rgb_cmp == 1)
+      else if (u32_rgb_cmp == 1)
           s16_hsv_hue_x256 = static_cast<int16_t>((0x10000*2)/3)
                            + static_cast<int16_t>(_dotpn2(u32_hsv_hue_mult43_div,
                                                           _packlh2(u32_rgb_or16, u32_rgb_gb16)));

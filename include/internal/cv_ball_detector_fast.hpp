@@ -25,7 +25,7 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
 {
   private:
     uint64_t m_detectRange;
-    uint8_t  m_detectExpected;
+    uint32_t m_detectExpected;
 
     int32_t  m_targetX;
     int32_t  m_targetY;
@@ -136,12 +136,12 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
       const uint32_t u32_hsv_hue_mult43_div = _pack2(m_mult43_div[u16_rgb_delta],
                                                      m_mult43_div[u16_rgb_delta]);
       int16_t s16_hsv_hue_x256;
-      const uint8_t u8_rgb_cmp = _cmpeq2(u32_rgb_max_max, u32_rgb_gb16);
-      if (u8_rgb_cmp == 0)
+      const uint32_t u32_rgb_cmp = _cmpeq2(u32_rgb_max_max, u32_rgb_gb16);
+      if (u32_rgb_cmp == 0)
         s16_hsv_hue_x256 = static_cast<int16_t>((0x10000*0)/3)
                          + static_cast<int16_t>(_dotpn2(u32_hsv_hue_mult43_div,
                                                         _packhl2(u32_rgb_gb16, u32_rgb_gb16)));
-      else if (u8_rgb_cmp == 1)
+      else if (u32_rgb_cmp == 1)
         s16_hsv_hue_x256 = static_cast<int16_t>((0x10000*2)/3)
                          + static_cast<int16_t>(_dotpn2(u32_hsv_hue_mult43_div,
                                                         _packlh2(u32_rgb_or16, u32_rgb_gb16)));
@@ -155,11 +155,11 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
 
       const uint32_t u32_hsv               = _packh4(u32_hsv_ooo_val_x256, u32_hsv_sat_hue_x256);
       const uint64_t u64_hsv_range         = m_detectRange;
-      const uint8_t  u8_hsv_det            = _cmpltu4(u32_hsv, _hill(u64_hsv_range))
+      const uint32_t u32_hsv_det           = _cmpltu4(u32_hsv, _hill(u64_hsv_range))
                                            | _cmpgtu4(u32_hsv, _loll(u64_hsv_range));
 
       // SCORE cf5dee: 2.541, 2.485, 2.526, 2.471, 2.514
-      if (u8_hsv_det != m_detectExpected)
+      if (u32_hsv_det != m_detectExpected)
         return false;
 
       _out_rgb888 = 0xffff00;
