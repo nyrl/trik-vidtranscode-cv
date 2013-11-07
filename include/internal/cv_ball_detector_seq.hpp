@@ -335,12 +335,7 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
 
       if (m_inImageDesc.m_height > 0 && m_inImageDesc.m_width > 0)
       {
-#ifdef DEBUG_COMBINE_YUYV_RGB_HSV
         convertImageYuyvToHsv(_inImage);
-#else
-        convertImageYuyvToRgb888(_inImage);
-        convertImageRgb888ToHsv();
-#endif
         proceedImageHsv(_outImage);
       }
 
