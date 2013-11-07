@@ -6,6 +6,7 @@
 #endif
 
 #include <cassert>
+#include <cmath>
 #include <c6x.h>
 
 #include "internal/stdcpp.hpp"
@@ -45,81 +46,69 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
       *_rgb565ptr = ((_rgb888>>19)&0x001f) | ((_rgb888>>5)&0x07e0) | ((_rgb888<<8)&0xf800);
     }
 
-    static void __attribute__((always_inline)) drawOutputPixelBound(const int32_t _srcCol,
-                                                                    const int32_t _srcRow,
-                                                                    const uint32_t _rgb888,
-                                                                    const int32_t _srcColBot,
-                                                                    const int32_t _srcColTop,
-                                                                    const int32_t _srcRowBot,
-                                                                    const int32_t _srcRowTop,
-                                                                    const uint32_t _srcToDstShift,
-                                                                    int8_t* _dstPtr,
-                                                                    const uint32_t _dstPtrLineLength)
+    void __attribute__((always_inline)) drawOutputPixelBound(const int32_t _srcCol,
+                                                             const int32_t _srcRow,
+                                                             const int32_t _srcColBot,
+                                                             const int32_t _srcColTop,
+                                                             const int32_t _srcRowBot,
+                                                             const int32_t _srcRowTop,
+                                                             const TrikCvImageBuffer& _outImage,
+                                                             const uint32_t _rgb888) const
     {
       const int32_t srcCol = range<int32_t>(_srcColBot, _srcCol, _srcColTop);
       const int32_t srcRow = range<int32_t>(_srcRowBot, _srcRow, _srcRowTop);
 
-      const int32_t dstRow = srcRow >> _srcToDstShift;
-      const int32_t dstCol = srcCol >> _srcToDstShift;
+      const int32_t dstRow = srcRow >> m_srcToDstShift;
+      const int32_t dstCol = srcCol >> m_srcToDstShift;
 
-      const uint32_t dstOfs = dstRow*_dstPtrLineLength + dstCol*sizeof(uint16_t);
-      writeOutputPixel(reinterpret_cast<uint16_t*>(_dstPtr+dstOfs), _rgb888);
+      const uint32_t dstOfs = dstRow*m_outImageDesc.m_lineLength + dstCol*sizeof(uint16_t);
+      writeOutputPixel(reinterpret_cast<uint16_t*>(_outImage.m_ptr+dstOfs), _rgb888);
     }
 
-    void __attribute__((always_inline)) drawOutputCross(const int32_t _srcCol,
-                                                        const int32_t _srcRow,
-                                                        const TrikCvImageBuffer& _outImage,
-                                                        const uint32_t _rgb888) const
+    void __attribute__((always_inline)) drawOutputCircle(const int32_t _srcCol,
+                                                         const int32_t _srcRow,
+                                                         const uint32_t _srcPoints,
+                                                         const TrikCvImageBuffer& _outImage,
+                                                         const uint32_t _rgb888) const
     {
       const int32_t widthBot  = 0;
       const int32_t widthTop  = m_inImageDesc.m_width-1;
       const int32_t heightBot = 0;
       const int32_t heightTop = m_inImageDesc.m_height-1;
 
-      const uint32_t srcToDstShift = m_srcToDstShift;
-      int8_t* dstPtr                  = _outImage.m_ptr;
-      const uint32_t dstPtrLineLength = m_outImageDesc.m_lineLength;
+      const int32_t srcRadius = std::ceil(std::sqrt(static_cast<double>(_srcPoints) / 3.141592653589793238462));
 
-#pragma MUST_ITERATE(10, 10, 10)
-      for (int adj = 10; adj < 20; ++adj)
+      int32_t circleError  = 1-srcRadius;
+      int32_t circleErrorY = 1;
+      int32_t circleErrorX = -2*srcRadius;
+      int32_t circleX = srcRadius;
+      int32_t circleY = 0;
+
+      drawOutputPixelBound(_srcCol, _srcRow+srcRadius, widthBot, widthTop, heightBot, heightTop, _outImage, _rgb888);
+      drawOutputPixelBound(_srcCol, _srcRow-srcRadius, widthBot, widthTop, heightBot, heightTop, _outImage, _rgb888);
+      drawOutputPixelBound(_srcCol+srcRadius, _srcRow, widthBot, widthTop, heightBot, heightTop, _outImage, _rgb888);
+      drawOutputPixelBound(_srcCol-srcRadius, _srcRow, widthBot, widthTop, heightBot, heightTop, _outImage, _rgb888);
+
+      while (circleY < circleX)
       {
-        drawOutputPixelBound(_srcCol-adj, _srcRow-1,   _rgb888,
-                             widthBot, widthTop, heightBot, heightTop,
-                             srcToDstShift, dstPtr, dstPtrLineLength);
-        drawOutputPixelBound(_srcCol-adj, _srcRow  ,   _rgb888,
-                             widthBot, widthTop, heightBot, heightTop,
-                             srcToDstShift, dstPtr, dstPtrLineLength);
-        drawOutputPixelBound(_srcCol-adj, _srcRow+1,   _rgb888,
-                             widthBot, widthTop, heightBot, heightTop,
-                             srcToDstShift, dstPtr, dstPtrLineLength);
-        drawOutputPixelBound(_srcCol+adj, _srcRow-1,   _rgb888,
-                             widthBot, widthTop, heightBot, heightTop,
-                             srcToDstShift, dstPtr, dstPtrLineLength);
-        drawOutputPixelBound(_srcCol+adj, _srcRow  ,   _rgb888,
-                             widthBot, widthTop, heightBot, heightTop,
-                             srcToDstShift, dstPtr, dstPtrLineLength);
-        drawOutputPixelBound(_srcCol+adj, _srcRow+1,   _rgb888,
-                             widthBot, widthTop, heightBot, heightTop,
-                             srcToDstShift, dstPtr, dstPtrLineLength);
+        if (circleError >= 0)
+        {
+          circleX      -= 1;
+          circleErrorX += 2;
+          circleError  += circleErrorX;
+        }
+        circleY      += 1;
+        circleErrorY += 2;
+        circleError  += circleErrorY;
 
-        drawOutputPixelBound(_srcCol-1,   _srcRow-adj, _rgb888,
-                             widthBot, widthTop, heightBot, heightTop,
-                             srcToDstShift, dstPtr, dstPtrLineLength);
-        drawOutputPixelBound(_srcCol,     _srcRow-adj, _rgb888,
-                             widthBot, widthTop, heightBot, heightTop,
-                             srcToDstShift, dstPtr, dstPtrLineLength);
-        drawOutputPixelBound(_srcCol+1,   _srcRow-adj, _rgb888,
-                             widthBot, widthTop, heightBot, heightTop,
-                             srcToDstShift, dstPtr, dstPtrLineLength);
-        drawOutputPixelBound(_srcCol-1,   _srcRow+adj, _rgb888,
-                             widthBot, widthTop, heightBot, heightTop,
-                             srcToDstShift, dstPtr, dstPtrLineLength);
-        drawOutputPixelBound(_srcCol,     _srcRow+adj, _rgb888,
-                             widthBot, widthTop, heightBot, heightTop,
-                             srcToDstShift, dstPtr, dstPtrLineLength);
-        drawOutputPixelBound(_srcCol+1,   _srcRow+adj, _rgb888,
-                             widthBot, widthTop, heightBot, heightTop,
-                             srcToDstShift, dstPtr, dstPtrLineLength);
+        drawOutputPixelBound(_srcCol+circleX, _srcRow+circleY, widthBot, widthTop, heightBot, heightTop, _outImage, _rgb888);
+        drawOutputPixelBound(_srcCol+circleX, _srcRow-circleY, widthBot, widthTop, heightBot, heightTop, _outImage, _rgb888);
+        drawOutputPixelBound(_srcCol-circleX, _srcRow+circleY, widthBot, widthTop, heightBot, heightTop, _outImage, _rgb888);
+        drawOutputPixelBound(_srcCol-circleX, _srcRow-circleY, widthBot, widthTop, heightBot, heightTop, _outImage, _rgb888);
+        drawOutputPixelBound(_srcCol+circleY, _srcRow+circleX, widthBot, widthTop, heightBot, heightTop, _outImage, _rgb888);
+        drawOutputPixelBound(_srcCol+circleY, _srcRow-circleX, widthBot, widthTop, heightBot, heightTop, _outImage, _rgb888);
+        drawOutputPixelBound(_srcCol-circleY, _srcRow+circleX, widthBot, widthTop, heightBot, heightTop, _outImage, _rgb888);
+        drawOutputPixelBound(_srcCol-circleY, _srcRow-circleX, widthBot, widthTop, heightBot, heightTop, _outImage, _rgb888);
       }
     }
 
@@ -365,7 +354,7 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
       {
         int32_t targetX = m_targetX/m_targetPoints;
         int32_t targetY = m_targetY/m_targetPoints;
-        drawOutputCross(targetX, targetY, _outImage, 0xff00ff);
+        drawOutputCircle(targetX, targetY, m_targetPoints, _outImage, 0x00ffff);
         _outArgs.targetX = ((targetX - static_cast<int32_t>(m_inImageDesc.m_width) /2) * 100*2) / static_cast<int32_t>(m_inImageDesc.m_width);
         _outArgs.targetY = ((targetY - static_cast<int32_t>(m_inImageDesc.m_height)/2) * 100*2) / static_cast<int32_t>(m_inImageDesc.m_height);
       }
