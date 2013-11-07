@@ -120,7 +120,7 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
                                                               const uint32_t _hsv_expect)
     {
       const uint32_t u32_hsv_det = _cmpltu4(_hsv, _hill(_hsv_range))
-                                | _cmpgtu4(_hsv, _loll(_hsv_range));
+                                 | _cmpgtu4(_hsv, _loll(_hsv_range));
 
       return (u32_hsv_det == _hsv_expect);
     }
