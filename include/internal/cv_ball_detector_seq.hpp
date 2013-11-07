@@ -258,7 +258,7 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
           const bool det = detectHsvPixel(_loll(rgb888hsv), u64_hsv_range, u32_hsv_expect);
           targetPointsPerRow += det;
           targetPointsCol += det?srcCol:0;
-          writeOutputPixel(dstImageRow+dstCol, det?0xffff00:_hill(rgb888hsv));
+          writeOutputPixel(dstImageRow+dstCol, det?0x00ffff:_hill(rgb888hsv));
         }
         m_targetX      += targetPointsCol;
         m_targetY      += srcRow*targetPointsPerRow;
@@ -354,7 +354,7 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
       {
         int32_t targetX = m_targetX/m_targetPoints;
         int32_t targetY = m_targetY/m_targetPoints;
-        drawOutputCircle(targetX, targetY, m_targetPoints, _outImage, 0x00ffff);
+        drawOutputCircle(targetX, targetY, m_targetPoints, _outImage, 0xffff00);
         _outArgs.targetX = ((targetX - static_cast<int32_t>(m_inImageDesc.m_width) /2) * 100*2) / static_cast<int32_t>(m_inImageDesc.m_width);
         _outArgs.targetY = ((targetY - static_cast<int32_t>(m_inImageDesc.m_height)/2) * 100*2) / static_cast<int32_t>(m_inImageDesc.m_height);
       }
