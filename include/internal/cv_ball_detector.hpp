@@ -49,7 +49,7 @@ class BallDetector : public CVAlgorithm,
 
 // include one of implementations
 //#include "internal/cv_ball_detector_ref.hpp"
-//#include "internal/cv_ball_detector_seq.hpp"
-#include "internal/cv_ball_detector_fast.hpp"
+#include "internal/cv_ball_detector_seq.hpp"
+//#include "internal/cv_ball_detector_fast.hpp"
 
 #endif // !TRIK_VIDTRANSCODE_CV_INTERNAL_CV_BALL_DETECTOR_HPP_
