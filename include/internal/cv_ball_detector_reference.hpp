@@ -6,6 +6,7 @@
 #endif
 
 #include <cassert>
+#include <cmath>
 #include <vector>
 
 #include "internal/stdcpp.hpp"
@@ -312,10 +313,13 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
 
       const XDAS_UInt32 inImagePixels = m_inImageDesc.m_width * m_inImageDesc.m_height;
       if (inImagePixels > 0)
-        _outArgs.targetMass = (static_cast<XDAS_UInt32>(m_targetPoints) * static_cast<XDAS_UInt32>(10000))
-                            / inImagePixels; // scaling to 0..10000
+      {
+        const XDAS_UInt32 targetRadius = std::ceil(std::sqrt(static_cast<float>(m_targetPoints) / 3.1415927f));
+        _outArgs.targetSize = static_cast<XDAS_UInt32>(targetRadius*100*4)
+                            / inImagePixels; // scaling to 0..100
+      }
       else
-        _outArgs.targetMass = 0;
+        _outArgs.targetSize = 0;
 
       if (m_targetPoints > 0)
       {

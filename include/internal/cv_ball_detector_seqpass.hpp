@@ -67,7 +67,7 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
 
     void __attribute__((always_inline)) drawOutputCircle(const int32_t _srcCol,
                                                          const int32_t _srcRow,
-                                                         const uint32_t _srcPoints,
+                                                         const int32_t _srcRadius,
                                                          const TrikCvImageBuffer& _outImage,
                                                          const uint32_t _rgb888) const
     {
@@ -76,18 +76,16 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
       const int32_t heightBot = 0;
       const int32_t heightTop = m_inImageDesc.m_height-1;
 
-      const int32_t srcRadius = std::ceil(std::sqrt(static_cast<double>(_srcPoints) / 3.141592653589793238462));
-
-      int32_t circleError  = 1-srcRadius;
+      int32_t circleError  = 1-_srcRadius;
       int32_t circleErrorY = 1;
-      int32_t circleErrorX = -2*srcRadius;
-      int32_t circleX = srcRadius;
+      int32_t circleErrorX = -2*_srcRadius;
+      int32_t circleX = _srcRadius;
       int32_t circleY = 0;
 
-      drawOutputPixelBound(_srcCol, _srcRow+srcRadius, widthBot, widthTop, heightBot, heightTop, _outImage, _rgb888);
-      drawOutputPixelBound(_srcCol, _srcRow-srcRadius, widthBot, widthTop, heightBot, heightTop, _outImage, _rgb888);
-      drawOutputPixelBound(_srcCol+srcRadius, _srcRow, widthBot, widthTop, heightBot, heightTop, _outImage, _rgb888);
-      drawOutputPixelBound(_srcCol-srcRadius, _srcRow, widthBot, widthTop, heightBot, heightTop, _outImage, _rgb888);
+      drawOutputPixelBound(_srcCol, _srcRow+_srcRadius, widthBot, widthTop, heightBot, heightTop, _outImage, _rgb888);
+      drawOutputPixelBound(_srcCol, _srcRow-_srcRadius, widthBot, widthTop, heightBot, heightTop, _outImage, _rgb888);
+      drawOutputPixelBound(_srcCol+_srcRadius, _srcRow, widthBot, widthTop, heightBot, heightTop, _outImage, _rgb888);
+      drawOutputPixelBound(_srcCol-_srcRadius, _srcRow, widthBot, widthTop, heightBot, heightTop, _outImage, _rgb888);
 
       while (circleY < circleX)
       {
@@ -343,25 +341,25 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
       } // repeat
 #endif
 
-      const uint32_t inImagePixels = m_inImageDesc.m_width * m_inImageDesc.m_height;
-      if (inImagePixels > 0)
-        _outArgs.targetMass = (static_cast<uint32_t>(m_targetPoints) * static_cast<uint32_t>(10000))
-                            / inImagePixels; // scaling to 0..10000
-      else
-        _outArgs.targetMass = 0;
-
       if (m_targetPoints > 0)
       {
-        int32_t targetX = m_targetX/m_targetPoints;
-        int32_t targetY = m_targetY/m_targetPoints;
-        drawOutputCircle(targetX, targetY, m_targetPoints, _outImage, 0xffff00);
+        const int32_t targetX = m_targetX/m_targetPoints;
+        const int32_t targetY = m_targetY/m_targetPoints;
+
+        assert(m_inImageDesc.m_height > 0 && m_inImageDesc.m_width > 0); // more or less safe since no target points would be detected otherwise
+        const uint32_t targetRadius = std::ceil(std::sqrt(static_cast<float>(m_targetPoints) / 3.1415927f));
+
+        drawOutputCircle(targetX, targetY, targetRadius, _outImage, 0xffff00);
+
         _outArgs.targetX = ((targetX - static_cast<int32_t>(m_inImageDesc.m_width) /2) * 100*2) / static_cast<int32_t>(m_inImageDesc.m_width);
         _outArgs.targetY = ((targetY - static_cast<int32_t>(m_inImageDesc.m_height)/2) * 100*2) / static_cast<int32_t>(m_inImageDesc.m_height);
+        _outArgs.targetSize = static_cast<uint32_t>(targetRadius*100*4) / static_cast<uint32_t>(m_inImageDesc.m_width + m_inImageDesc.m_height);
       }
       else
       {
         _outArgs.targetX = 0;
         _outArgs.targetY = 0;
+        _outArgs.targetSize = 0;
       }
 
       return true;
