@@ -150,6 +150,7 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
     {
       const uint32_t u32_rgb_or16    = _unpkhu4(_rgb888);
       const uint32_t u32_rgb_gb16    = _unpklu4(_rgb888);
+
       const uint32_t u32_rgb_max2    = _maxu4(_rgb888, _rgb888>>8);
       const uint32_t u32_rgb_max     = _clr(_maxu4(u32_rgb_max2, u32_rgb_max2>>8), 8, 31); // top 3 bytes were non-zeroes!
       const uint32_t u32_rgb_max_max = _pack2(u32_rgb_max, u32_rgb_max);
@@ -177,7 +178,7 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
           s32_hsv_hue_x256 = static_cast<int32_t>((0x10000*2)/3)
                            + static_cast<int32_t>(_dotpn2(u32_hsv_hue_mult43_div,
                                                           _packlh2(u32_rgb_or16, u32_rgb_gb16)));
-      else
+      else // 2, 3
           s32_hsv_hue_x256 = static_cast<int32_t>((0x10000*1)/3)
                            + static_cast<int32_t>(_dotpn2(u32_hsv_hue_mult43_div,
                                                           _pack2(  u32_rgb_gb16, u32_rgb_or16)));
