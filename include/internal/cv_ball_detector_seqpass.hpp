@@ -191,26 +191,25 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
 
     void DEBUG_INLINE convertImageYuyvToHsv(const TrikCvImageBuffer& _inImage)
     {
-      const int8_t* restrict srcImageRow = _inImage.m_ptr;
-      uint64_t* restrict rgb888hsvptr    = s_rgb888hsv;
-      const uint32_t height     = m_inImageDesc.m_height;
-      const uint32_t lineLength = m_inImageDesc.m_lineLength;
-      const uint32_t widthxu16  = m_inImageDesc.m_width*sizeof(uint16_t);
+      const uint32_t srcImageRowEffectiveSize       = m_inImageDesc.m_width*sizeof(uint16_t);
+      const uint32_t srcImageRowEffectiveToFullSize = m_inImageDesc.m_lineLength - srcImageRowEffectiveSize;
+      const int8_t* restrict srcImageRow      = _inImage.m_ptr;
+      const int8_t* restrict srcImageTo       = srcImageRow + m_inImageDesc.m_lineLength*m_inImageDesc.m_height;
+      uint64_t* restrict rgb888hsvptr         = s_rgb888hsv;
 
       assert(m_inImageDesc.m_height % 4 == 0); // verified in setup
 #pragma MUST_ITERATE(4, ,4)
-      for (uint32_t heightRemains=height; heightRemains>0; --heightRemains)
+      while (srcImageRow != srcImageTo)
       {
         assert(reinterpret_cast<intptr_t>(srcImageRow) % 8 == 0); // let's pray...
-        const uint64_t* restrict srcImagex2 = reinterpret_cast<const uint64_t*>(srcImageRow);
-        const uint64_t* restrict srcImagex2To = reinterpret_cast<const uint64_t*>(srcImageRow + widthxu16);
+        const uint64_t* restrict srcImageCol4 = reinterpret_cast<const uint64_t*>(srcImageRow);
+        srcImageRow += srcImageRowEffectiveSize;
 
         assert(m_inImageDesc.m_width % 32 == 0); // verified in setup
-        assert(srcImagex2To-srcImagex2 == m_inImageDesc.m_width/4); // should be so...
 #pragma MUST_ITERATE(32/4, ,32/4)
-        while (srcImagex2 != srcImagex2To)
+        while (reinterpret_cast<const int8_t*>(srcImageCol4) != srcImageRow)
         {
-          const uint64_t yuyv2x = *srcImagex2++;
+          const uint64_t yuyv2x = *srcImageCol4++;
 
           const uint64_t rgb12 = convert2xYuyvToRgb888(_loll(yuyv2x));
           *rgb888hsvptr++ = _itoll(_loll(rgb12), convertRgb888ToHsv(_loll(rgb12)));
@@ -221,7 +220,7 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
           *rgb888hsvptr++ = _itoll(_hill(rgb34), convertRgb888ToHsv(_hill(rgb34)));
         }
 
-        srcImageRow += lineLength;
+        srcImageRow += srcImageRowEffectiveToFullSize;
       }
     }
 
