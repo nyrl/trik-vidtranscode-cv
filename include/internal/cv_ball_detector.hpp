@@ -33,7 +33,7 @@ class BallDetector : public CVAlgorithm,
 
 
 
-#if 1
+#if 0
 #define DEBUG_INLINE __attribute__((noinline))
 #else
 #define DEBUG_INLINE __attribute__((always_inline))

@@ -34,7 +34,7 @@ delete targ.profiles["coverage"];
 delete targ.profiles["profile"];
 delete targ.profiles["whole_program"];
 delete targ.profiles["whole_program_debug"];
-//delete targ.profiles["debug"];
+delete targ.profiles["debug"];
 }
 
 /* Create a .zip or .tar file for redistribution. */
