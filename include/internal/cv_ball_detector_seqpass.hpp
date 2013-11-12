@@ -19,10 +19,10 @@
 
 
 
-
-static uint16_t s_mult43_div[(1u<<8)];
-static uint16_t s_mult255_div[(1u<<8)];
+#warning Eliminate global var
 static uint64_t s_rgb888hsv[640*480];
+
+
 
 
 template <>
@@ -39,6 +39,9 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
 
     TrikCvImageDesc m_inImageDesc;
     TrikCvImageDesc m_outImageDesc;
+
+    static uint16_t* restrict s_mult43_div;  // allocated from fast ram
+    static uint16_t* restrict s_mult255_div; // allocated from fast ram
 
     static void __attribute__((always_inline)) writeOutputPixel(uint16_t* restrict _rgb565ptr,
                                                                 const uint32_t _rgb888)
@@ -265,7 +268,9 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
     }
 
   public:
-    virtual bool setup(const TrikCvImageDesc& _inImageDesc, const TrikCvImageDesc& _outImageDesc)
+    virtual bool setup(const TrikCvImageDesc& _inImageDesc,
+                       const TrikCvImageDesc& _outImageDesc,
+                       int8_t* _fastRam, size_t _fastRamSize)
     {
       m_inImageDesc  = _inImageDesc;
       m_outImageDesc = _outImageDesc;
@@ -281,12 +286,24 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
             && (m_inImageDesc.m_height>>m_srcToDstShift) <= m_outImageDesc.m_height)
           break;
 
-      s_mult43_div[0] = 0;
-      s_mult255_div[0] = 0;
-      for (uint32_t idx = 1; idx < (1u<<8); ++idx)
+      /* Static member initialization on first instance creation */
+      if (s_mult43_div == NULL || s_mult255_div == NULL)
       {
-        s_mult43_div[ idx] = (43u  * (1u<<8)) / idx;
-        s_mult255_div[idx] = (255u * (1u<<8)) / idx;
+        if (_fastRamSize < (1u<<8)*sizeof(*s_mult43_div) + (1u<<8)*sizeof(*s_mult255_div))
+          return false;
+
+        s_mult43_div  = reinterpret_cast<typeof(s_mult43_div)>(_fastRam);
+        _fastRam += (1u<<8)*sizeof(*s_mult43_div);
+        s_mult255_div = reinterpret_cast<typeof(s_mult255_div)>(_fastRam);
+        _fastRam += (1u<<8)*sizeof(*s_mult255_div);
+
+        s_mult43_div[0] = 0;
+        s_mult255_div[0] = 0;
+        for (uint32_t idx = 1; idx < (1u<<8); ++idx)
+        {
+          s_mult43_div[ idx] = (43u  * (1u<<8)) / idx;
+          s_mult255_div[idx] = (255u * (1u<<8)) / idx;
+        }
       }
 
       return true;
@@ -365,6 +382,11 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
       return true;
     }
 };
+
+uint16_t* restrict BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422,
+                                TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_RGB565X>::s_mult43_div = NULL;
+uint16_t* restrict BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422,
+                                TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_RGB565X>::s_mult255_div = NULL;
 
 
 } /* **** **** **** **** **** * namespace cv * **** **** **** **** **** */

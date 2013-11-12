@@ -50,12 +50,13 @@ static TrikCvPersistentData& getHandlePersistentData(TrikCvHandle* _handle)
 
 
 template <typename _CVAlgorithm>
-XDAS_Int32 createCVAlgorithm(TrikCvPersistentData& _pd,
+XDAS_Int32 createCVAlgorithm(const TrikCvHandle* _handle,
+                             TrikCvPersistentData& _pd,
                              const TrikCvImageDesc& _inImageDesc,
                              const TrikCvImageDesc& _outImageDesc)
 {
   _pd.m_cvAlgorithm.reset(new _CVAlgorithm());
-  if (!_pd.m_cvAlgorithm->setup(_inImageDesc, _outImageDesc))
+  if (!_pd.m_cvAlgorithm->setup(_inImageDesc, _outImageDesc, _handle->m_fastRam, _handle->m_fastRamSize))
   {
     Log_error0("CV algorithm setup failed");
     return IALG_EFAIL;
@@ -67,13 +68,14 @@ XDAS_Int32 createCVAlgorithm(TrikCvPersistentData& _pd,
 
 
 
-XDAS_Int32 handleSetupImageDescCreateCVAlgorithm(TrikCvPersistentData& _pd,
+XDAS_Int32 handleSetupImageDescCreateCVAlgorithm(const TrikCvHandle* _handle,
+                                                 TrikCvPersistentData& _pd,
                                                  const TrikCvImageDesc& _inImageDesc,
                                                  const TrikCvImageDesc& _outImageDesc)
 {
 #define IF_IN_OUT_FORMAT(_CVAlgorithm, _inFormat, _outFormat) \
   if (_inImageDesc.m_format == _inFormat && _outImageDesc.m_format == _outFormat) \
-    return createCVAlgorithm<_CVAlgorithm<_inFormat, _outFormat> >(_pd, _inImageDesc, _outImageDesc)
+    return createCVAlgorithm<_CVAlgorithm<_inFormat, _outFormat> >(_handle, _pd, _inImageDesc, _outImageDesc)
 
   IF_IN_OUT_FORMAT(trik::cv::BallDetector, TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_RGB565X);
 
@@ -132,7 +134,7 @@ static XDAS_Int32 handleSetupImageDesc(TrikCvHandle* _handle)
     return IALG_EFAIL;
   }
 
-  if ((res = handleSetupImageDescCreateCVAlgorithm(pd, inImageDesc, outImageDesc)) != IALG_EOK)
+  if ((res = handleSetupImageDescCreateCVAlgorithm(_handle, pd, inImageDesc, outImageDesc)) != IALG_EOK)
   {
     Log_error0("Cannot create CV algorithm");
     return res;

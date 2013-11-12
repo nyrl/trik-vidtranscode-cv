@@ -16,7 +16,9 @@
 class CVAlgorithm : private noncopyable
 {
   public:
-    virtual bool setup(const TrikCvImageDesc& _inImageDesc, const TrikCvImageDesc& _outImageDesc) = 0;
+    virtual bool setup(const TrikCvImageDesc& _inImageDesc,
+                       const TrikCvImageDesc& _outImageDesc,
+                       int8_t* _fastRam, size_t _fastRamSize) = 0;
     virtual bool run(const TrikCvImageBuffer& _inImage, TrikCvImageBuffer& _outImage,
                      const TrikCvAlgInArgs& _inArgs, TrikCvAlgOutArgs& _outArgs) = 0;
 

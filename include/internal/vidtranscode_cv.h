@@ -19,8 +19,13 @@ typedef struct TrikCvHandle {
 
     TRIK_VIDTRANSCODE_CV_Params			m_params;
     TRIK_VIDTRANSCODE_CV_DynamicParams		m_dynamicParams;
+
     void*					m_persistentData; /* Handle to C++ class */
+
+    XDAS_Int8*                                  m_fastRam; /* Fast memory for algorithm scratch pad */
+    size_t                                      m_fastRamSize;
 } TrikCvHandle;
+static const size_t TrikCvFastRamSize=0x1000;
 
 typedef TRIK_VIDTRANSCODE_CV_VideoFormat TrikCvImageFormat;
 typedef XDAS_Int8* TrikCvImagePtr;

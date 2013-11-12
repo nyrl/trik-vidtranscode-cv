@@ -92,9 +92,13 @@ Int TRIK_VIDTRANSCODE_CV_alloc(
     _algMemTab[0].alignment	= 0;
     _algMemTab[0].space		= IALG_EXTERNAL;
     _algMemTab[0].attrs		= IALG_PERSIST;
+    _algMemTab[1].size		= TrikCvFastRamSize;
+    _algMemTab[1].alignment	= 0;
+    _algMemTab[1].space		= IALG_DARAM0;
+    _algMemTab[1].attrs		= IALG_PERSIST;
 
     /* Return the number of records in the memTab */
-    return 1;
+    return 2;
 }
 
 
@@ -121,9 +125,14 @@ Int TRIK_VIDTRANSCODE_CV_free(
     _algMemTab[0].alignment	= 0;
     _algMemTab[0].space		= IALG_EXTERNAL;
     _algMemTab[0].attrs		= IALG_PERSIST;
+    _algMemTab[1].base		= handle->m_fastRam;
+    _algMemTab[1].size		= handle->m_fastRamSize;
+    _algMemTab[1].alignment	= 0;
+    _algMemTab[1].space		= IALG_DARAM0;
+    _algMemTab[1].attrs		= IALG_PERSIST;
 
     /* Return the number of records in the memTab */
-    return 1;
+    return 2;
 }
 
 
@@ -142,6 +151,9 @@ Int TRIK_VIDTRANSCODE_CV_initObj(
 {
     TrikCvHandle* handle = (TrikCvHandle*)_algHandle;
     XDAS_Int32 res;
+
+    handle->m_fastRam     = _algMemTab[1].base;
+    handle->m_fastRamSize = _algMemTab[1].size;
 
     if ((res = trikCvHandleInit(handle)) != IALG_EOK)
         return res;

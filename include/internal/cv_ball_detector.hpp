@@ -23,7 +23,9 @@ class BallDetector : public CVAlgorithm,
                      private assert_inst<false> // Generic instance, non-functional
 {
   public:
-    virtual bool setup(const TrikCvImageDesc& _inImageDesc, const TrikCvImageDesc& _outImageDesc) { return false; }
+    virtual bool setup(const TrikCvImageDesc& _inImageDesc,
+                       const TrikCvImageDesc& _outImageDesc,
+                       int8_t* _fastRam, size_t _fastRamSize) { return false; }
     virtual bool run(const TrikCvImageBuffer& _inImage, TrikCvImageBuffer& _outImage,
                      const TrikCvAlgInArgs& _inArgs, TrikCvAlgOutArgs& _outArgs);
 
