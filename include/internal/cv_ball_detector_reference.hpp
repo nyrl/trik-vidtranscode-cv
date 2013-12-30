@@ -184,23 +184,25 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
         writeRgbPixel(_srcCol, _rgbRow, _r, _g, _b);
     }
 
+    union YUYV
+    {
+      struct
+      {
+        XDAS_UInt8 m_y1;
+        XDAS_UInt8 m_u;
+        XDAS_UInt8 m_y2;
+        XDAS_UInt8 m_v;
+      } m_unpacked;
+      XDAS_UInt32 m_packed;
+    };
+
     void proceedTwoYuyvPixels(const XDAS_UInt32 _yuyv,
                               const TrikCvImageDimension _srcCol,
                               const TrikCvImageDimension _srcRow,
                               XDAS_UInt16* _rgbRow)
     {
       typedef XDAS_Int16 Int16;
-      union YUYV
-      {
-        struct
-        {
-          XDAS_UInt8 m_y1;
-          XDAS_UInt8 m_u;
-          XDAS_UInt8 m_y2;
-          XDAS_UInt8 m_v;
-        } m_unpacked;
-        XDAS_UInt32 m_packed;
-      } m_yuyv;
+      YUYV m_yuyv;
       m_yuyv.m_packed = _yuyv;
 
       const Int16 y1 = static_cast<Int16>(m_yuyv.m_unpacked.m_y1) - static_cast<Int16>(16);
@@ -234,7 +236,10 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
     }
 
   public:
-    virtual bool setup(const TrikCvImageDesc& _inImageDesc, const TrikCvImageDesc& _outImageDesc)
+    virtual bool setup(const TrikCvImageDesc& _inImageDesc,
+                       const TrikCvImageDesc& _outImageDesc,
+                       int8_t* _fastRam,
+                       size_t _fastRamSize)
     {
       m_inImageDesc  = _inImageDesc;
       m_outImageDesc = _outImageDesc;
