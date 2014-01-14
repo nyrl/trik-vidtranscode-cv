@@ -19,7 +19,7 @@
 
 
 template <>
-class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_RGB565X> : public CVAlgorithm
+class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422P, TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_RGB565X> : public CVAlgorithm
 {
   private:
     TrikCvImageDesc m_inImageDesc;
@@ -295,20 +295,36 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422, TRIK_VIDTRANSCODE_C
       m_targetY = 0;
       m_targetPoints = 0;
 
+      TrikCvImagePtr ptrY = _inImage.m_ptr;
+      TrikCvImagePtr ptrC = _inImage.m_ptr + m_inImageDesc.m_lineLength * m_inImageDesc.m_height;
+
       for (TrikCvImageDimension srcRow=0; srcRow < m_inImageDesc.m_height; ++srcRow)
       {
         assert(srcRow < m_srcToDstRowConv.size());
         const TrikCvImageDimension dstRow = m_srcToDstRowConv[srcRow];
 
         const TrikCvImageSize srcRowOfs = srcRow*m_inImageDesc.m_lineLength;
-        const XDAS_UInt32* srcImage = reinterpret_cast<XDAS_UInt32*>(_inImage.m_ptr + srcRowOfs);
+        const XDAS_UInt8* srcImageY = reinterpret_cast<XDAS_UInt8*>(ptrY + srcRowOfs);
+        const XDAS_UInt8* srcImageC = reinterpret_cast<XDAS_UInt8*>(ptrC + srcRowOfs);
 
         const TrikCvImageSize dstRowOfs = dstRow*m_outImageDesc.m_lineLength;
         XDAS_UInt16* dstImageRow = reinterpret_cast<XDAS_UInt16*>(_outImage.m_ptr + dstRowOfs);
 
         assert(m_inImageDesc.m_width % 32 == 0); // verified in setup
-        for (TrikCvImageDimension srcCol=0; srcCol < m_inImageDesc.m_width; srcCol+=2)
-          proceedTwoYuyvPixels(*srcImage++, srcCol, srcRow, dstImageRow);
+        for (TrikCvImageDimension srcCol=0; srcCol < m_inImageDesc.m_width; srcCol+=4)
+        {
+          YUYV srcImage;
+          srcImage.m_unpacked.m_y1 = *srcImageY++;
+          srcImage.m_unpacked.m_u  = *srcImageC++;
+          srcImage.m_unpacked.m_y2 = *srcImageY++;
+          srcImage.m_unpacked.m_v  = *srcImageC++;
+          proceedTwoYuyvPixels(srcImage.m_packed, srcCol+0, srcRow, dstImageRow);
+          srcImage.m_unpacked.m_y1 = *srcImageY++;
+          srcImage.m_unpacked.m_u  = *srcImageC++;
+          srcImage.m_unpacked.m_y2 = *srcImageY++;
+          srcImage.m_unpacked.m_v  = *srcImageC++;
+          proceedTwoYuyvPixels(srcImage.m_packed, srcCol+2, srcRow, dstImageRow);
+        }
       }
 
 
