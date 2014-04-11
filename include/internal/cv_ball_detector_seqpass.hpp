@@ -195,7 +195,7 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422P, TRIK_VIDTRANSCODE_
 
     void DEBUG_INLINE convertImageYuyvToHsv(const TrikCvImageBuffer& _inImage)
     {
-      const uint32_t srcImageRowEffectiveSize       = m_inImageDesc.m_width;
+      const uint32_t srcImageRowEffectiveSize       = m_inImageDesc.m_width*sizeof(uint8_t);
       const uint32_t srcImageRowEffectiveToFullSize = m_inImageDesc.m_lineLength - srcImageRowEffectiveSize;
       const int8_t* restrict srcImageRowY     = _inImage.m_ptr;
       const int8_t* restrict srcImageRowC     = _inImage.m_ptr + m_inImageDesc.m_lineLength*m_inImageDesc.m_height;
@@ -206,15 +206,15 @@ class BallDetector<TRIK_VIDTRANSCODE_CV_VIDEO_FORMAT_YUV422P, TRIK_VIDTRANSCODE_
 #pragma MUST_ITERATE(4, ,4)
       while (srcImageRowY != srcImageToY)
       {
-        assert(reinterpret_cast<intptr_t>(srcImageRowY) % 8 == 0); // let's pray...
-        assert(reinterpret_cast<intptr_t>(srcImageRowC) % 8 == 0); // let's pray...
+        assert(reinterpret_cast<intptr_t>(srcImageRowY) % sizeof(uint32_t) == 0); // let's pray...
         const uint32_t* restrict srcImageColY4 = reinterpret_cast<const uint32_t*>(srcImageRowY);
+        assert(reinterpret_cast<intptr_t>(srcImageRowC) % sizeof(uint32_t) == 0); // let's pray...
         const uint32_t* restrict srcImageColC4 = reinterpret_cast<const uint32_t*>(srcImageRowC);
         srcImageRowY += srcImageRowEffectiveSize;
         srcImageRowC += srcImageRowEffectiveSize;
 
         assert(m_inImageDesc.m_width % 32 == 0); // verified in setup
-#pragma MUST_ITERATE(32/4, ,32/4)
+#pragma MUST_ITERATE(32/sizeof(uint32_t), ,32/sizeof(uint32_t))
         while (reinterpret_cast<const int8_t*>(srcImageColY4) != srcImageRowY)
         {
           assert(reinterpret_cast<const int8_t*>(srcImageColC4) != srcImageRowC);
